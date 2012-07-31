@@ -27,7 +27,10 @@
     (is (= (->Sql "?" [123])
            (sql 123)))
     (is (= (->Sql "A ? B ?" ["a" "b"])
-           (sql [(raw "A") "a" (raw "B") "b"])))))
+           (sql [(raw "A") "a" (raw "B") "b"])))
+    (is (= (->Sql "" [nil]) (sql [nil])))
+    
+    ))
     
 
     

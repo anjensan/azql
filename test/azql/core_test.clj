@@ -77,7 +77,13 @@
          (select
           (join-cross :a "A")
           (join-cross :b "B")
-          (join-cross :c "C"))))
+          (join-cross :c "C"))
+
+         "SELECT * FROM A a CUSTOM JOIN B b"
+         (select
+          (from :a "A")
+          (join* (raw "CUSTOM JOIN") :b "B" nil))
+         ))
   
   (testing "test inner joins"
     (are [s z] (= s (:sql (sql z)))

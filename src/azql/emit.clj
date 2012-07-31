@@ -90,7 +90,9 @@
   clojure.lang.Symbol
   (as-sql [this] (raw (name this)))
   Object
-  (as-sql [this] (arg this)))
+  (as-sql [this] (arg this))
+  nil
+  (as-sql [this] #azql.emit.Sql["" [nil]]))
 
 (defn ^Sql sql
   "Convert object to Sql"
@@ -110,7 +112,8 @@
  SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON,
  AND, OR, NOT, NULL, AS, IS_NULL, IS_NOT_NULL,
  ORDER_BY, GROUP_BY, HAVING_ON, DESC, ASC,
- LEFT_OUTER, RIGHT_OUTER, FULL_OUTER, CROSS, INNER)
+ LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
+ CROSS_JOIN, INNER_JOIN)
 
 (do-template
  [kname value]

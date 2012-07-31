@@ -1,14 +1,8 @@
 (ns azql.util
   (:require [clojure.string :as s]))
 
-(defn contains-element? 
-  "True if seq contains element"
-  [seq elm]
-  (if (vector? seq)
-    (reduce #(or %1 %2) (map #(= %1 elm) seq))
-    (some #(= elm %) seq)))
-
 (defn map-vals
+  "Apply f to the values of map m. Returns new map"
   [f m]
   (into (empty m) (for [[k v] m] [k (f v)])))
 

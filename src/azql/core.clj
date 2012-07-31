@@ -18,11 +18,14 @@
   (as-sql [this]
     (sql SELECT ASTERISK FROM (qname name))))
 
-(defn as-alias
+(defn- as-alias
+  "Interprets value as column/table alias"
   [n]
   (keyword (name n)))
 
 (defn as-table-or-subquery
+  "Converts value to table name or subquery.
+   Surrounds subquery into parenthesis."
   [v]
   (cond
    (keyword? v) v
@@ -31,6 +34,7 @@
    :else (parenthesis v)))
 
 (defn join*
+  "Adds join section to query."
   [{:keys [tables joins] :as relation} type alias table cond]
   (let [a (as-alias alias)]
     (when (contains? tables a)
@@ -56,7 +60,8 @@
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
-(def empty-select #azql.core.Select{})
+(def ^{:doc "Emtpy query"}
+  empty-select #azql.core.Select{})
 
 (defmacro select
   [& body]
@@ -69,20 +74,24 @@
     (into {} (map (juxt as-alias prepare-macro-expression) fs))))
 
 (defn fields*
+  "Add fieldlist to query"
   [s fd]
   (when (:fields s)
     (illegal-argument "Relation already has specified fields"))
   (assoc s :fields fd))
 
 (defmacro fields
+  "Adds fieldlist to query, support macro expressions."
   [s fd]
   `(fields* ~s ~(prepare-fields fd)))
 
 (defn where*
+  "Adds 'where' condition to query"
   [{w :where :as s} c]
   (assoc s :where (conj-expression w c)))
 
 (defmacro where
+  "Adds 'where' condition to query, support macro expressions"
   [s c]
   `(where* ~s ~(prepare-macro-expression c)))
 
@@ -101,9 +110,12 @@
     ASTERISK
     (interpose COMMA (map (fn [[a b]] (render-field a b)) fields))))
 
-(def ^:private join-type
-  {:left LEFT_OUTER, :right RIGHT_OUTER,
-   :full FULL_OUTER, :inner INNER, :cross CROSS})
+(defn- join-type
+  [jt]
+  (get
+   {:left LEFT_OUTER_JOIN, :right RIGHT_OUTER_JOIN,
+    :full FULL_OUTER_JOIN, :inner INNER_JOIN, :cross CROSS_JOIN}
+   jt jt))
 
 (defn- render-from-section
   [tables joins]
@@ -115,10 +127,9 @@
    (for [[a jn c] (rest joins) :let [t (tables a)]]
      (if (nil? jn)
        [COMMA (render-from-table a t)]
-       [(get join-type jn)
-        JOIN (render-from-table a t)
-        (if-not (= :cross jn)
-          [ON (render-expression c)] NONE)]))])
+       [(join-type jn)
+        (render-from-table a t)
+        (if c [ON (render-expression c)] NONE)]))])
 
 (defn- render-where-section
   [where]
