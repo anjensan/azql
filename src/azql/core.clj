@@ -60,12 +60,14 @@
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
-(def ^{:doc "Emtpy query"}
-  empty-select #azql.core.Select{})
+(defn select*
+  "Creates empty select."
+  [] #azql.core.Select{})
 
 (defmacro select
+  "Creates new select."
   [& body]
-  `(-> empty-select ~@body))
+  (emit-threaded-expression select* body))
 
 (defn- prepare-fields
   [fs]

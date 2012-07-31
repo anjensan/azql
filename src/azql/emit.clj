@@ -5,39 +5,42 @@
 (defrecord Sql [sql args])
 
 (defprotocol SqlLike
-  (^Sql as-sql [this] "Convert object to 'Sql'"))
+  (as-sql [this] "Converts object to 'Sql'"))
 
 (extend-type Sql
   SqlLike
   (as-sql [this] this))
 
+(defn sql?
+  "Check if expression is rendered (raw) SQL"
+  [s]
+  (instance? Sql s))
+
 (defn raw
-  "Construct new raw SQL (without parameters)"
+  "Constructs new raw SQL (without parameters)"
   ([s] (Sql. (str s) nil)))
 
 (defn arg
-  "Construct new parameter"
+  "Constructs new parameter."
   [v]
   (Sql. "?" [v]))
 
 (defn parse-qname
   "Split qualified name and return first part. Ex :a.val => [:a :val]"
   [qname]
-  (if (vector? qname)
-    (mapv keyword qname)
-    (let [n (name qname)
-          rp (s/split n #"\.")]
-      (mapv keyword rp))))
+  (let [n (name qname)
+        rp (s/split n #"\.")]
+    (mapv keyword rp)))
 
 (defn qualifier
-  "Return first part of qname. Ex: :a.val => :a, :x => nil"
+  "Return first part of qualified name. Ex: :a.val => :a, :x => nil"
   [qname]
   (let [n (parse-qname qname)]
     (when (> (count n) 1)
       (first n))))
 
 (defn ^:dynamic quote-name
-  "Quote qname"
+  "Quote name."
   [s]
   (str \" s \"))
 
@@ -54,8 +57,8 @@
   (let [r (parse-qname qname)]
     (s/join \. (map emit-quoted-qname-part r))))
 
-(defn ^Sql qname
-  "Construct qualified name"
+(defn qname
+  "Constructs qualified name."
   ([qn] (Sql. (emit-qname qn) nil))
   ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
 
@@ -83,8 +86,8 @@
   clojure.lang.Sequential
   (as-sql [this]
     (let [s (map as-sql (flatten this))]
-       (Sql. (join-sql-strings (map #(.sql ^Sql %) s))
-             (mapcat #(.args ^Sql %) s))))
+       (Sql. (join-sql-strings (map :sql s))
+             (mapcat :args s))))
   clojure.lang.Keyword
   (as-sql [this] (qname this))
   clojure.lang.Symbol
@@ -94,16 +97,14 @@
   nil
   (as-sql [this] #azql.emit.Sql["" [nil]]))
 
-(defn ^Sql sql
+(defn sql
   "Convert object to Sql"
   ([v]
      (let [v (as-sql v)]
-       (assoc v :args (vec (.args v)) :sql (s/trim (.sql v)))))
+       (assoc v :args (vec (:args v)) :sql (s/trim (:sql v)))))
   ([v & r] (sql (list* v r))))
 
 ;; todo: read http://savage.net.au/SQL/sql-92.bnf.html
-
-(def <> not=)
 
 (do-template
  [kname]
@@ -137,6 +138,6 @@
  COMMA ",")
 
 (defn parenthesis
-  "Surround into parenthesis"
+  "Surrounds expression into parenthesis."
   [e]
   [LEFT_PAREN e RIGHT_PAREN])

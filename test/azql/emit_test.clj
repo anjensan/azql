@@ -6,8 +6,7 @@
   (testing "parse qnames"
     (is (= [:a :b] (parse-qname :a.b)))
     (is (= [:a] (parse-qname :a)))
-    (is (= [:a :b :c] (parse-qname :a.b.c)))
-    (is (= [:a :b] (parse-qname [:a :b]))))
+    (is (= [:a :b :c] (parse-qname :a.b.c))))
   (testing "emit qnames"
     (is (= "\"A\".\"B\"" (emit-qname :A.B)))
     (is (= "\"Abc\"" (emit-qname :Abc)))))
