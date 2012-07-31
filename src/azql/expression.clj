@@ -14,7 +14,7 @@
    := (fn [a b] [a EQUALS b])
    :<> (fn [a b] [a NOT_EQUALS b])
    :* (fn [& r] (interpose MULTIPLY r))
-   :- (fn ([x] [MINUS x]) ([a & r] (interpose MINUS (cons a r))))
+   :- (fn ([x] [UMINUS x]) ([a & r] (interpose MINUS (cons a r))))
    :div (fn [x y] [x DIVIDE y])
    :not (fn [x] [NOT x])
    :< (fn [a b] [a LESS b])
@@ -35,10 +35,6 @@
   [f]
   (expr-rendering-fn
    (get expr-synonims f f)))
-
-(defn parenthesis
-  [e]
-  [LEFT_PARENTHESIS e RIGHT_PARENTHESIS])
 
 (defn expression-symbol?
   [s]

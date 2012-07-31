@@ -59,11 +59,31 @@
   ([qn] (Sql. (emit-qname qn) nil))
   ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
 
+(defn need-insert-space?
+  [^String a ^String b]
+  (not
+   (or
+    (nil? a)
+    (.isEmpty a)
+    (.startsWith b ")")
+    (.endsWith a "(")
+    (.startsWith b ","))))
+
+(defn- join-sql-strings
+  [strings]
+  (let [sb (StringBuilder.)]
+    (reduce (fn [prev curr]
+              (when (and (not (nil? prev)) (need-insert-space? prev curr))
+                (.append sb \space))
+              (.append sb curr)
+              curr) nil strings)
+    (str sb)))
+
 (extend-protocol SqlLike
   clojure.lang.Sequential
   (as-sql [this]
     (let [s (map as-sql (flatten this))]
-       (Sql. (s/join " " (map #(.sql ^Sql %) s))
+       (Sql. (join-sql-strings (map #(.sql ^Sql %) s))
              (mapcat #(.args ^Sql %) s))))
   clojure.lang.Keyword
   (as-sql [this] (qname this))
@@ -85,30 +105,35 @@
 
 (do-template
  [kname]
- (def kname (raw (s/replace (name 'kname) #"_" " ")))
+ (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
 
  SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON,
  AND, OR, NOT, NULL, AS, IS_NULL, IS_NOT_NULL,
  ORDER_BY, GROUP_BY, HAVING_ON, DESC, ASC,
  LEFT_OUTER, RIGHT_OUTER, FULL_OUTER, CROSS, INNER)
 
-(def NONE (raw ""))
-
 (do-template
  [kname value]
  (def kname (raw value))
- 
- LEFT_PARENTHESIS "("
- RIGHT_PARENTHESIS ")"
+
+ NONE ""
+ ASTERISK "*" 
+ LEFT_PAREN "("
+ RIGHT_PAREN ")"
  EQUALS "="
  NOT_EQUALS "<>"
  LESS "<"
  GREATER ">"
  LESS_EQUAL "<="
  GREATER_EQUAL ">="
- ASTERISK "*"
  PLUS "+"
  MINUS "-"
+ UMINUS "-"
  DIVIDE "/"
  MULTIPLY "*"
  COMMA ",")
+
+(defn parenthesis
+  "Surround into parenthesis"
+  [e]
+  [LEFT_PAREN e RIGHT_PAREN])

@@ -124,7 +124,7 @@
   [where]
   (render-expression where))
 
-(defn render-select
+(defn- render-select
   [{:keys [fields tables joins where] :as relation}]
   (as-sql
    [SELECT (render-fields-section fields tables)

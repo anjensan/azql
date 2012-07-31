@@ -4,11 +4,11 @@
 
 (deftest test-render-expr
   (testing "test rendering of expressions"
-    (is (= #azql.emit.Sql["( ( ? > ? ) AND ( ? < ? ) )" [1 2 3 4]]
+    (is (= #azql.emit.Sql["((? > ?) AND (? < ?))" [1 2 3 4]]
            (sql (render-expression [:and [:> 1 2] [:< 3 4]]))))
-    (is (= #azql.emit.Sql["( ( ? + ? + ? ) * ( ? - ? - ? ) * ( - ? ) )" [1 2 3 4 5 6 7]]
+    (is (= #azql.emit.Sql["((? + ? + ?) * (? - ? - ?) * (- ?))" [1 2 3 4 5 6 7]]
            (sql (render-expression [:* [:+ 1 2 3] [:- 4 5 6] [:- 7]]))))
-    (is (= #azql.emit.Sql["( \"A\" = ? )" [1]]
+    (is (= #azql.emit.Sql["(\"A\" = ?)" [1]]
            (sql (render-expression [:= :A 1]))))
     ))
 
