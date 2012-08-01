@@ -3,7 +3,8 @@
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [clojure.java.jdbc :as jdbc]))
 
 (declare render-select)
 
@@ -143,5 +144,51 @@
    [SELECT (render-fields-section fields tables)
     FROM (render-from-section tables joins)
     (if where [WHERE (render-where-section where)] NONE)]))
+
+(defn- to-sql-params
+  [relation]
+  (let [{s :sql p :args} (sql relation)]
+    (apply vector s p)))
+
+(defmacro with-results
+  "Executes a query & evaluates body with 'v' bound to seq of results."
+  [[v relation :as vr] & body]
+  (assert (vector? vr))
+  (assert (= 2 (count vr)))
+  `(let [sp# (#'to-sql-params ~relation)]
+     (jdbc/with-query-results ~v sp# ~@body)))
+
+(defn fetch-all
+  "Executes query and return results as vector"
+  [relation]
+  (jdbc/with-query-results* (to-sql-params relation) vec))
+
+(defn- one-result
+  "Extracts one record from resultset."
+  [r]
+  (when (< 1 (count r))
+    (println (vec r))
+    (throw (IllegalStateException. "There is more than 1 record in resultset.")))
+  (first r))
+
+(defn- single-result
+  "Extract sinlge value from resultset. Useful for aggreagate functions."
+  [r]
+  (let [x (one-result r)]
+    (when (not= 1 (count r))
+      (throw (IllegalStateException. "There is more than 1 columns in record.")))
+    (val (first x))))
+
+(defn fetch-one
+  "Executes query and return first element or throws exceptions
+   if resultset contains more than one record"
+  [relation]
+  (jdbc/with-query-results* (to-sql-params relation) one-result))
+
+(defn fetch-single
+  "Executes quiery and return single result value. Useful for aggregate functions"
+  [relation]
+  (jdbc/with-query-results* (to-sql-params relation) single-result))
+  
 
 
