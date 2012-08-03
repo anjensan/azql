@@ -1,6 +1,5 @@
 (ns azql.integration-test
   (:use clojure.test)
-  (:use azql.test-db)
   (:use azql.core)
   (:require [clojure.java.jdbc :as jdbc]))
 
@@ -57,7 +56,7 @@
 
 (defn create-testdb-fixture
   [f]
-  (jdbc/with-connection h2-database
+  (jdbc/with-connection h2-database-connection
     (jdbc/with-quoted-identifiers \"
       (create-database)
       (populate-database))
