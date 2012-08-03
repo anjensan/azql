@@ -8,7 +8,7 @@
             [clojure.java.jdbc :as jdbc]))
 
 (defrecord Select
-    [tables joins fields where group having order]
+    [tables joins fields where group having order modifier]
   SqlLike
   (as-sql [this] (sql (render-select this))))
 
@@ -89,6 +89,12 @@
        (illegal-argument "Invalig sort direction " dir))
      (assoc relation
        :order (conj (vec order) [column dir]))))
+
+(defn modifier
+  [{cm :modifier :as relation} m]
+  (when cm
+    (illegal-state "Relation already has modifier " cm))
+  (assoc relation :modifier m))
 
 ;; fetching
 

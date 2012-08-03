@@ -62,9 +62,14 @@
       [ORDER_BY (interpose COMMA (map f order))]
       NONE)))
 
+(defn render-modifier
+  [{m :modifier}]
+  (get {:distinct DISTINCT :all ALL nil NONE} m m))
+
 (defn render-select
   [{:keys [fields tables joins where order] :as relation}]
   [SELECT
+   (render-modifier relation)
    (render-fields relation)
    (render-from relation)
    (render-where relation)

@@ -12,6 +12,9 @@
          "SELECT * FROM Table1 a"
          (select (from :a "Table1"))
 
+         "SELECT DISTINCT * FROM Table1 a"
+         (select (modifier :distinct) (from :a "Table1"))
+
          "SELECT * FROM Table1"
          (select (from "Table1"))
 
