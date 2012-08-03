@@ -90,6 +90,7 @@
           (fields [:id :name])
           (from :users)
           (order :name)
+          (offset 0)
           (fetch-all)))))
 
   (testing "lazy select all entities and collect ids"

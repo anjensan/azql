@@ -66,6 +66,16 @@
   [{m :modifier}]
   (get {:distinct DISTINCT :all ALL nil NONE} m m))
 
+(def max-limit-value Integer/MAX_VALUE)
+
+(defn render-limit
+  [{:keys [limit offset]}]
+  (if (or limit offset)
+    (let [lim (raw (str (if limit (long limit) max-limit-value)))]
+      [LIMIT lim
+       (if offset [OFFSET (raw (str (long offset)))] NONE)])
+    NONE))
+
 (defn render-select
   [{:keys [fields tables joins where order] :as relation}]
   [SELECT
@@ -73,4 +83,5 @@
    (render-fields relation)
    (render-from relation)
    (render-where relation)
-   (render-order relation)])
+   (render-order relation)
+   (render-limit relation)])

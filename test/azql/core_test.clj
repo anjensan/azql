@@ -108,3 +108,11 @@
          (select (from :a "A") (order :x :desc))
          "SELECT * FROM A a ORDER BY a.x, a.y ASC, a.z DESC"
          (select (from :a "A") (order :a.x) (order :a.y :asc) (order :a.z :desc)))))
+
+(deftest test-limit-and-offset
+  (testing "test offset"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM X LIMIT 10"
+         (select (from "X") (limit 10))
+         "SELECT * FROM X LIMIT 10 OFFSET 20"
+         (select (from "X") (limit 10) (offset 20)))))

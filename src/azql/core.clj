@@ -8,7 +8,9 @@
             [clojure.java.jdbc :as jdbc]))
 
 (defrecord Select
-    [tables joins fields where group having order modifier]
+    [tables joins fields where
+     group having order
+     modifier offset limit]
   SqlLike
   (as-sql [this] (sql (render-select this))))
 
@@ -95,6 +97,25 @@
   (when cm
     (illegal-state "Relation already has modifier " cm))
   (assoc relation :modifier m))
+
+(defn limit
+  "Limit number of rows"
+  [{ov :limit :as relation} v]
+  (when (not (integer? v))
+    (illegal-argument "Limit should be integer"))
+  (when ov
+    (illegal-state "Relation already has limit " ov))
+  (assoc relation :limit v))
+
+(defn offset
+  "Adds an offset to relation"
+  [{ov :offset :as relation} v]
+  (when (not (integer? v))
+    (illegal-argument "Offset should be integer"))
+  (when ov
+    (illegal-state "Relation already has offset " ov))
+  (assoc relation :offset v))
+
 
 ;; fetching
 
