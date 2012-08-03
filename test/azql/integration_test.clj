@@ -81,14 +81,15 @@
          4 :posts
          9 :comments))
   
-  (testing "select all entities"
+  (testing "select all entities (order by name)"
     (is (=
-         [{:id 1 :name "Artyom"}
-          {:id 2 :name "Anton"}
-          {:id 3 :name "Arturas"}]
+         [{:id 2 :name "Anton"}
+          {:id 3 :name "Arturas"}
+          {:id 1 :name "Artyom"}]
          (select
           (fields [:id :name])
           (from :users)
+          (order :name)
           (fetch-all)))))
 
   (testing "lazy select all entities and collect ids"

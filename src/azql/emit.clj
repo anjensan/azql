@@ -67,7 +67,8 @@
   (not
    (or
     (nil? a)
-    (.isEmpty a)
+    (nil? b)
+    (.isEmpty b)
     (.startsWith b ")")
     (.endsWith a "(")
     (.startsWith b ","))))

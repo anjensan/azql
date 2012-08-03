@@ -9,29 +9,22 @@
 (declare render-select)
 
 (defrecord Select
-    [tables joins fields where group having]
+    [tables joins fields where group having order]
   SqlLike
   (as-sql [this] (render-select this)))
-
-(defrecord Table
-    [name]
-  SqlLike
-  (as-sql [this]
-    (sql SELECT ASTERISK FROM (qname name))))
 
 (defn- as-alias
   "Interprets value as column/table alias"
   [n]
   (keyword (name n)))
 
-(defn as-table-or-subquery
+(defn- as-table-or-subquery
   "Converts value to table name or subquery.
    Surrounds subquery into parenthesis."
   [v]
   (cond
    (keyword? v) v
    (string? v) (keyword v)
-   (instance? Table v) (keyword (:name v))
    :else (parenthesis v)))
 
 (defn join*
@@ -45,17 +38,17 @@
       :joins (conj (vec joins) [a type cond]))))
 
 (do-template
- [jname jkey]
- (defn jname
-   ([relation alias table] (join* relation jkey alias table nil))
-   ([relation table] (join* relation jkey table table nil)))
+ [join-name join-key]
+ (defn join-name
+   ([relation alias table] (join* relation join-key alias table nil))
+   ([relation table] (join* relation join-key table table nil)))
  from nil, join-cross :cross)
 
 (do-template
- [jname jkey]
- (defmacro jname
+ [join-name join-key]
+ (defmacro join-name
    ([relation alias table cond]
-      `(join* ~relation ~jkey ~alias ~table ~(prepare-macro-expression cond)))
+      `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
    ([relation table cond]
       `(join-left ~relation ~table ~table ~cond)))
  join-inner :inner, join :inner,
@@ -98,6 +91,18 @@
   [s c]
   `(where* ~s ~(prepare-macro-expression c)))
 
+(defn order
+  "Adds 'order by' section to query"
+  ([relation column] (order relation column nil))
+  ([{order :order :as relation} column dir]
+     (when (not (contains? #{:asc :desc nil} dir))
+       (illegal-argument "Invalig sort direction " dir))
+     (assoc relation
+       :order (conj (vec order) [column dir]))))
+
+;; rendering
+;; TODO: move to separate ns
+
 (defn- render-from-table
   [alias nm]
   (let [t (as-table-or-subquery nm)]
@@ -138,12 +143,20 @@
   [where]
   (render-expression where))
 
+(defn- render-orderby-section
+  [order]
+  (let [f (fn [[c d]] [(render-expression c) (get {nil NONE :asc ASC :desc DESC} d d)])]
+    (interpose COMMA (map f order))))
+
 (defn- render-select
-  [{:keys [fields tables joins where] :as relation}]
+  [{:keys [fields tables joins where order] :as relation}]
   (as-sql
    [SELECT (render-fields-section fields tables)
     FROM (render-from-section tables joins)
-    (if where [WHERE (render-where-section where)] NONE)]))
+    (if where [WHERE (render-where-section where)] NONE)
+    (if order [ORDER_BY (render-orderby-section order)] NONE)]))
+
+;; fetching
 
 (defn- to-sql-params
   [relation]

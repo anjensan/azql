@@ -94,3 +94,14 @@
           (join :b "B" (= :a.x :b.y))))
     ))
 
+(deftest test-orderby
+  (testing "test simple orderby"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM A a ORDER BY x"
+         (select (from :a "A") (order :x))
+         "SELECT * FROM A a ORDER BY x ASC"
+         (select (from :a "A") (order :x :asc))
+         "SELECT * FROM A a ORDER BY x DESC"
+         (select (from :a "A") (order :x :desc))
+         "SELECT * FROM A a ORDER BY a.x, a.y ASC, a.z DESC"
+         (select (from :a "A") (order :a.x) (order :a.y :asc) (order :a.z :desc)))))
