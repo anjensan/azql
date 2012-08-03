@@ -1,6 +1,5 @@
 (ns azql.expression
-  (:use [azql emit])
-  (:use clojure.walk))
+  (:use [azql emit]))
 
 ;; TODO: add LIKE, ANY, SOME, EXISTS etc
 
@@ -11,8 +10,16 @@
   {:and (fn [& r] (interpose AND r))
    :or  (fn [& r] (interpose OR r))
    :+ (fn [& r] (interpose PLUS r))
-   := (fn [a b] [a EQUALS b])
-   :<> (fn [a b] [a NOT_EQUALS b])
+   := (fn [a b]
+        (cond
+         (nil? a) [b IS_NULL]
+         (nil? b) [a IS_NULL]
+         :else [a EQUALS b]))
+   :<> (fn [a b]
+         (cond
+          (nil? a) [b IS_NOT_NULL]
+          (nil? b) [a IS_NOT_NULL]
+          :else [a NOT_EQUALS b]))
    :* (fn [& r] (interpose MULTIPLY r))
    :- (fn ([x] [UMINUS x]) ([a & r] (interpose MINUS (cons a r))))
    :div (fn [x y] [x DIVIDE y])

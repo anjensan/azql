@@ -122,6 +122,16 @@
           (from :users)
           (where (= :id 3))
           (fields [:name])
-          (fetch-single))))))
+          (fetch-single)))))
+
+  (testing "get posts without parent"
+    (is (=
+         5
+         (count
+          (select
+           (from :comments)
+           (where (= :parentid nil))
+           (fetch-all)))))))
+           
           
 

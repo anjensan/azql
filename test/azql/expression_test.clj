@@ -33,13 +33,22 @@
          '[:+ x :b 3] '(+ x :b 3)
          [:or [:> 1 2] [:< 1 2] [:>= 1 2]] '(or (> 1 2) (< 1 2) (>= 1 2))
          '[:not [:nil? x]] '(not (nil? x))
-         ))
+         )))
+
+(deftest test-null-aware-comparasions
+  (testing "test null-aware comparasions"
+    (are [a b] (= (str \( a \)) (:sql (sql (render-expression b))))
+         "\"x\" IS NULL" [:= nil :x]
+         "\"y\" IS NULL" [:= :y nil]
+         "\"x\" IS NOT NULL" [:<> nil :x]
+         "\"y\" IS NOT NULL" [:<> :y nil]
+         "? IS NULL" [:= nil nil]
+         "? IS NOT NULL" [:<> nil nil])))
+
+(deftest test-conj-boolean-expressions
   (testing "conj two expressions"
     (is (= [:and 1 2 3] (conj-expression [:and 1 2] 3)))
     (is (= :x (conj-expression nil :x)))
     (is (= :x (conj-expression () :x)))
     (is (= [:> 1 2] (conj-expression [] [:> 1 2])))
-    (is (= [:and [:or :a :b] :c] (conj-expression [:and [:or :a :b]] :c))))
-  )
-
-        
+    (is (= [:and [:or :a :b] :c] (conj-expression [:and [:or :a :b]] :c)))))

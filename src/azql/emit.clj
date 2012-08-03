@@ -95,7 +95,7 @@
   Object
   (as-sql [this] (arg this))
   nil
-  (as-sql [this] #azql.emit.Sql["" [nil]]))
+  (as-sql [this] (arg nil)))
 
 (defn sql
   "Convert object to Sql"
