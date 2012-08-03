@@ -1,31 +1,30 @@
 (ns azql.core
-  (:use [azql util expression emit])
+  (:use [azql util expression emit
+         [render :only [render-select]]])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
             [clojure.walk :as walk]
             [clojure.java.jdbc :as jdbc]))
 
-(declare render-select)
-
 (defrecord Select
     [tables joins fields where group having order]
   SqlLike
-  (as-sql [this] (render-select this)))
+  (as-sql [this] (sql (render-select this))))
+
+(defn select*
+  "Creates empty select."
+  [] #azql.core.Select{})
+
+(defmacro select
+  "Creates new select."
+  [& body]
+  (emit-threaded-expression select* body))
 
 (defn- as-alias
   "Interprets value as column/table alias"
   [n]
   (keyword (name n)))
-
-(defn- as-table-or-subquery
-  "Converts value to table name or subquery.
-   Surrounds subquery into parenthesis."
-  [v]
-  (cond
-   (keyword? v) v
-   (string? v) (keyword v)
-   :else (parenthesis v)))
 
 (defn join*
   "Adds join section to query."
@@ -53,15 +52,6 @@
       `(join-left ~relation ~table ~table ~cond)))
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
-
-(defn select*
-  "Creates empty select."
-  [] #azql.core.Select{})
-
-(defmacro select
-  "Creates new select."
-  [& body]
-  (emit-threaded-expression select* body))
 
 (defn- prepare-fields
   [fs]
@@ -99,62 +89,6 @@
        (illegal-argument "Invalig sort direction " dir))
      (assoc relation
        :order (conj (vec order) [column dir]))))
-
-;; rendering
-;; TODO: move to separate ns
-
-(defn- render-from-table
-  [alias nm]
-  (let [t (as-table-or-subquery nm)]
-    (if (= alias t) t [t alias])))
-
-(defn- render-field
-  [alias nm]
-  (if (= alias nm) nm [(render-expression nm) alias]))
-
-(defn- render-fields-section
-  [fields tables]
-  (if (or (nil? fields) (= fields :*))
-    ASTERISK
-    (interpose COMMA (map (fn [[a b]] (render-field a b)) fields))))
-
-(defn- join-type
-  [jt]
-  (get
-   {:left LEFT_OUTER_JOIN, :right RIGHT_OUTER_JOIN,
-    :full FULL_OUTER_JOIN, :inner INNER_JOIN, :cross CROSS_JOIN}
-   jt jt))
-
-(defn- render-from-section
-  [tables joins]
-  [(let [[a jn] (first joins)
-         t (tables a)]
-     (when-not (contains? #{nil :cross} jn)
-       (illegal-state "First join should be CROSS JOIN"))
-     (render-from-table a t))
-   (for [[a jn c] (rest joins) :let [t (tables a)]]
-     (if (nil? jn)
-       [COMMA (render-from-table a t)]
-       [(join-type jn)
-        (render-from-table a t)
-        (if c [ON (render-expression c)] NONE)]))])
-
-(defn- render-where-section
-  [where]
-  (render-expression where))
-
-(defn- render-orderby-section
-  [order]
-  (let [f (fn [[c d]] [(render-expression c) (get {nil NONE :asc ASC :desc DESC} d d)])]
-    (interpose COMMA (map f order))))
-
-(defn- render-select
-  [{:keys [fields tables joins where order] :as relation}]
-  (as-sql
-   [SELECT (render-fields-section fields tables)
-    FROM (render-from-section tables joins)
-    (if where [WHERE (render-where-section where)] NONE)
-    (if order [ORDER_BY (render-orderby-section order)] NONE)]))
 
 ;; fetching
 
@@ -202,6 +136,3 @@
   "Executes quiery and return single result value. Useful for aggregate functions"
   [relation]
   (jdbc/with-query-results* (to-sql-params relation) single-result))
-  
-
-
