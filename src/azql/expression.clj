@@ -3,10 +3,10 @@
 
 ;; TODO: add LIKE, ANY, SOME, EXISTS etc
 
-(def ^:private expr-synonims
+(def expression-synonym
   {:not= :<>, :== :=, (keyword "/") :div})
 
-(def ^:private expr-rendering-fn
+(def expression-rendering-fn
   {:and (fn [& r] (interpose AND r))
    :or  (fn [& r] (interpose OR r))
    :+ (fn [& r] (interpose PLUS r))
@@ -36,12 +36,11 @@
 (defn- canon-expr-keyword
   [f]
   (let [k (keyword (name f))]
-    (get expr-synonims k k)))
+    (get expression-synonym k k)))
 
 (defn- find-expr-rendering-fn
   [f]
-  (expr-rendering-fn
-   (get expr-synonims f f)))
+  (expression-rendering-fn (get expression-synonym f f)))
 
 (defn expression-symbol?
   [s]

@@ -16,7 +16,8 @@
 
 (defn select*
   "Creates empty select."
-  [] #azql.core.Select{})
+  []
+  #azql.core.Select{})
 
 (defmacro select
   "Creates new select."
@@ -55,18 +56,18 @@
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
-(defn- prepare-fields
-  [fs]
-  (if (map? fs)
-    (map-vals prepare-macro-expression fs)
-    (into {} (map (juxt as-alias prepare-macro-expression) fs))))
-
 (defn fields*
   "Add fieldlist to query"
   [s fd]
   (when (:fields s)
     (illegal-argument "Relation already has specified fields"))
   (assoc s :fields fd))
+
+(defn- prepare-fields
+  [fs]
+  (if (map? fs)
+    (map-vals prepare-macro-expression fs)
+    (into {} (map (juxt as-alias prepare-macro-expression) fs))))
 
 (defmacro fields
   "Adds fieldlist to query, support macro expressions."
@@ -115,9 +116,6 @@
   (when ov
     (illegal-state "Relation already has offset " ov))
   (assoc relation :offset v))
-
-
-;; fetching
 
 (defn- to-sql-params
   [relation]

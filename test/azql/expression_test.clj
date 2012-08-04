@@ -9,8 +9,7 @@
     (is (= #azql.emit.Sql["((? + ? + ?) * (? - ? - ?) * (- ?))" [1 2 3 4 5 6 7]]
            (sql (render-expression [:* [:+ 1 2 3] [:- 4 5 6] [:- 7]]))))
     (is (= #azql.emit.Sql["(\"A\" = ?)" [1]]
-           (sql (render-expression [:= :A 1]))))
-    ))
+           (sql (render-expression [:= :A 1]))))))
 
 (deftest test-expresison-symbol
   (testing "expr symbol test"
@@ -32,8 +31,7 @@
          [:<> 1 2] '(not= 1 2)
          '[:+ x :b 3] '(+ x :b 3)
          [:or [:> 1 2] [:< 1 2] [:>= 1 2]] '(or (> 1 2) (< 1 2) (>= 1 2))
-         '[:not [:nil? x]] '(not (nil? x))
-         )))
+         '[:not [:nil? x]] '(not (nil? x)))))
 
 (deftest test-null-aware-comparasions
   (testing "test null-aware comparasions"
