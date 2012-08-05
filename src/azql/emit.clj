@@ -115,30 +115,17 @@
  AND, OR, NOT, NULL, AS, IS_NULL, IS_NOT_NULL,
  ORDER_BY, GROUP_BY, HAVING_ON, DESC, ASC,
  LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
- CROSS_JOIN, INNER_JOIN,
- DISTINCT, ALL,
- LIMIT, OFFSET)
+ CROSS_JOIN, INNER_JOIN,DISTINCT, ALL,LIMIT, OFFSET)
 
 (do-template
  [kname value]
  (def kname (raw value))
 
- NONE ""
- ASTERISK "*" 
- LEFT_PAREN "("
- RIGHT_PAREN ")"
- EQUALS "="
- NOT_EQUALS "<>"
- LESS "<"
- GREATER ">"
- LESS_EQUAL "<="
- GREATER_EQUAL ">="
- PLUS "+"
- MINUS "-"
- UMINUS "-"
- DIVIDE "/"
- MULTIPLY "*"
- COMMA ",")
+ NONE "", COMMA ",",ASTERISK "*",
+ LEFT_PAREN "(", RIGHT_PAREN ")",
+ EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
+ LESS_EQUAL "<=", GREATER_EQUAL ">=",
+ PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
 
 (defn parenthesis
   "Surrounds expression into parenthesis."

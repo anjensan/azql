@@ -93,6 +93,15 @@
      (assoc relation
        :order (conj (vec order) [column dir]))))
 
+(defn group
+  "Adds 'group by' section to quiery"
+  [{g :group :as relation} fields]
+  (when g
+    (illegal-state "Relation already has grouping " g))
+  (let [f (if (sequential? fields) fields [fields])]
+    (assoc relation
+      :group f)))
+
 (defn modifier
   [{cm :modifier :as relation} m]
   (when cm

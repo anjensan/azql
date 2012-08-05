@@ -97,3 +97,11 @@
          (select (from "X") (limit 10))
          "SELECT * FROM X LIMIT 10 OFFSET 20"
          (select (from "X") (limit 10) (offset 20)))))
+
+(deftest test-group-by
+  (testing "test simple grouping"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT a FROM T GROUP BY a"
+         (select (from "T") (group [:a]) (fields [:a]))
+         "SELECT a, b FROM T GROUP BY a, b"
+         (select (from "T") (group [:a :b]) (fields [:a :b])))))

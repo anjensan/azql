@@ -76,6 +76,12 @@
        (if offset [OFFSET (raw (str (long offset)))] NONE)])
     NONE))
 
+(defn render-group
+  [{g :group}]
+  (if g
+    [GROUP_BY (interpose COMMA g)]
+    NONE))
+
 (defn render-select
   [{:keys [fields tables joins where order] :as relation}]
   [SELECT
@@ -84,4 +90,5 @@
    (render-from relation)
    (render-where relation)
    (render-order relation)
+   (render-group relation)
    (render-limit relation)])
