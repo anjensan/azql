@@ -135,5 +135,45 @@
            (where (= :parentid nil))
            (fetch-all)))))))
            
-          
-
+(deftest test-multi-value-expressions
+  (testing "test 'in' operator"
+    (is
+     (=
+      9
+      (select
+       (from :comments)
+       (where (in? :userid [1 2 3]))
+       (fetch-all)
+       (count))))
+    (is
+     (=
+      3
+      (select
+       (from :comments)
+       (where (not-in? :userid [1 3]))
+       (fetch-all)
+       (count))))
+    (is
+     (=
+      0
+      (select
+       (from :comments)
+       (where (in? :userid []))
+       (fetch-all)
+       (count))))
+    (is
+     (=
+      9
+      (select
+       (from :comments)
+       (where (not-in? :userid []))
+       (fetch-all)
+       (count))))
+    (is
+     (=
+      6
+      (select
+       (from :comments)
+       (where (contains? :userid [1 3]))
+       (fetch-all)
+       (count))))))

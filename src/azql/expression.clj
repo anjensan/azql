@@ -1,12 +1,29 @@
 (ns azql.expression
   (:use [azql emit]))
 
-;; TODO: add LIKE, ANY, SOME, EXISTS etc
-
 (def expression-synonym
-  {:not= :<>, :== :=, (keyword "/") :div})
+  {:not= :<>, :== :=, (keyword "/") :div,
+   :contains? :in?})
 
-(def expression-rendering-fn
+(defn- args-list-size
+  [c]
+  {:pre [(pos? c)]
+   :post [(>= % c)]}
+  (let [b (cond (< c 16) 4, (< c 64) 16 :else 32)]
+    (-> c (dec) (+ b) (quot b) (* b))))
+
+(defn- args-list
+  [v]
+  (let [s (args-list-size (count v))
+        a (map arg v)]
+      (interpose
+       COMMA
+       (take s (cycle a)))))
+
+(def const-true (raw "(0=0)"))
+(def const-false (raw "(0=1)"))
+
+(def expression-render-fn
   {:and (fn [& r] (interpose AND r))
    :or  (fn [& r] (interpose OR r))
    :+ (fn [& r] (interpose PLUS r))
@@ -30,24 +47,30 @@
    :>= (fn [a b] [a GREATER_EQUAL b])
    :nil? (fn [x] [IS_NULL x])
    :not-nil? (fn [x] [IS_NOT_NULL x])
-   :in (fn [a b] [a IN b])
-   :not-in (fn [a b] [a NOT_IN b])})
+   :not-in? (fn [a b]
+              (if (empty? b)
+                const-true
+                [a NOT_IN (parenthesis (args-list b))]))
+   :in? (fn [a b]
+          (if (empty? b)
+            const-false
+            [a IN (parenthesis (args-list b))]))})
 
 (defn- canon-expr-keyword
   [f]
   (let [k (keyword (name f))]
     (get expression-synonym k k)))
 
-(defn- find-expr-rendering-fn
+(defn- find-expr-render-fn
   [f]
-  (expression-rendering-fn (get expression-synonym f f)))
+  (expression-render-fn (get expression-synonym f f)))
 
 (defn expression-symbol?
   [s]
   (and
    (symbol? s)
    (not
-    (nil? (find-expr-rendering-fn (keyword (name s)))))))
+    (nil? (find-expr-render-fn (keyword (name s)))))))
 
 (defn prepare-macro-expression
   "Walk tree and replace symbols with keywords.
@@ -68,11 +91,11 @@
    :else [:and expr e]))
 
 (defn render-expression
-  "Convert expressions tree to sql'like object."
+  "Convert expression tree to sql'like object."
   [etree]
   (if (and (sequential? etree) (keyword? (first etree)))
     (let [[f & r] etree
-          ef (find-expr-rendering-fn f)
+          ef (find-expr-render-fn f)
           rs (map render-expression r)]
       (parenthesis (apply ef rs)))
     etree))

@@ -2,12 +2,10 @@
   (:require [clojure.string :as s])
   (:use clojure.template))
 
-(defrecord Sql [sql args])
-
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'"))
 
-(extend-type Sql
+(defrecord Sql [sql args]
   SqlLike
   (as-sql [this] this))
 
@@ -62,7 +60,7 @@
   ([qn] (Sql. (emit-qname qn) nil))
   ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
 
-(defn need-insert-space?
+(defn- insert-space?
   [^String a ^String b]
   (not
    (or
@@ -77,7 +75,7 @@
   [strings]
   (let [sb (StringBuilder.)]
     (reduce (fn [prev curr]
-              (when (and (not (nil? prev)) (need-insert-space? prev curr))
+              (when (and (not (nil? prev)) (insert-space? prev curr))
                 (.append sb \space))
               (.append sb curr)
               curr) nil strings)
@@ -105,11 +103,9 @@
        (assoc v :args (vec (:args v)) :sql (s/trim (:sql v)))))
   ([v & r] (sql (list* v r))))
 
-;; todo: read http://savage.net.au/SQL/sql-92.bnf.html
 
 (do-template
- [kname]
- (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
+ [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
 
  SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON,
  AND, OR, NOT, NULL, AS, IS_NULL, IS_NOT_NULL,
@@ -117,9 +113,9 @@
  LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
  CROSS_JOIN, INNER_JOIN,DISTINCT, ALL,LIMIT, OFFSET)
 
+
 (do-template
- [kname value]
- (def kname (raw value))
+ [kname value] (def kname (raw value))
 
  NONE "", COMMA ",",ASTERISK "*",
  LEFT_PAREN "(", RIGHT_PAREN ")",
@@ -127,7 +123,9 @@
  LESS_EQUAL "<=", GREATER_EQUAL ">=",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
 
+
 (defn parenthesis
   "Surrounds expression into parenthesis."
   [e]
   [LEFT_PAREN e RIGHT_PAREN])
+
