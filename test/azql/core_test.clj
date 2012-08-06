@@ -92,9 +92,9 @@
 (deftest test-limit-and-offset
   (testing "test offset"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT * FROM X LIMIT 10"
+         "SELECT * FROM X LIMIT ?"
          (select (from "X") (limit 10))
-         "SELECT * FROM X LIMIT 10 OFFSET 20"
+         "SELECT * FROM X LIMIT ? OFFSET ?"
          (select (from "X") (limit 10) (offset 20)))))
 
 (deftest test-group-by

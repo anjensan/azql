@@ -71,9 +71,9 @@
 (defn render-limit
   [{:keys [limit offset]}]
   (if (or limit offset)
-    (let [lim (raw (str (if limit (long limit) max-limit-value)))]
+    (let [lim (arg (if limit (int limit) max-limit-value))]
       [LIMIT lim
-       (if offset [OFFSET (raw (str (long offset)))] NONE)])
+       (if offset [OFFSET (arg (int offset))] NONE)])
     NONE))
 
 (defn render-group
