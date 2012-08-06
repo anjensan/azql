@@ -91,7 +91,7 @@
      (when (not (contains? #{:asc :desc nil} dir))
        (illegal-argument "Invalig sort direction " dir))
      (assoc relation
-       :order (conj (vec order) [column dir]))))
+       :order (cons [column dir] order))))
 
 (defn group
   "Adds 'group by' section to quiery"

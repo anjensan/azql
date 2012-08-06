@@ -77,7 +77,7 @@
           (from :a "A")
           (join :b "B" (= :a.x :b.y))))))
 
-(deftest test-orderby
+(deftest test-order-by
   (testing "test simple orderby"
     (are [s z] (= s (:sql (sql z)))
          "SELECT * FROM A a ORDER BY x"
@@ -87,8 +87,7 @@
          "SELECT * FROM A a ORDER BY x DESC"
          (select (from :a "A") (order :x :desc))
          "SELECT * FROM A a ORDER BY a.x, a.y ASC, a.z DESC"
-         (select (from :a "A") (order :a.x)
-                 (order :a.y :asc) (order :a.z :desc)))))
+         (select (from :a "A") (order :a.z :desc) (order :a.y :asc) (order :a.x)))))
 
 (deftest test-limit-and-offset
   (testing "test offset"
