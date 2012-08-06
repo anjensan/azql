@@ -129,3 +129,7 @@
   [e]
   [LEFT_PAREN e RIGHT_PAREN])
 
+(defn comma-list
+  "Interpose values with comma"
+  [v]
+  (interpose COMMA v))

@@ -23,7 +23,7 @@
   [{:keys [fields tables]}]
   (if (or (nil? fields) (= fields :*))
     ASTERISK
-    (interpose COMMA (map render-field fields))))
+    (comma-list (map render-field fields))))
 
 (defn render-join-type
   [jt]
@@ -59,7 +59,7 @@
             [(render-expression c)
              (get {nil NONE :asc ASC :desc DESC} d d)])]
     (if order
-      [ORDER_BY (interpose COMMA (map f order))]
+      [ORDER_BY (comma-list (map f order))]
       NONE)))
 
 (defn render-modifier
@@ -79,7 +79,7 @@
 (defn render-group
   [{g :group}]
   (if g
-    [GROUP_BY (interpose COMMA g)]
+    [GROUP_BY (comma-list g)]
     NONE))
 
 (defn render-select

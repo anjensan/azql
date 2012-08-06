@@ -16,9 +16,7 @@
   [v]
   (let [s (args-list-size (count v))
         a (map arg v)]
-      (interpose
-       COMMA
-       (take s (cycle a)))))
+      (comma-list (take s (cycle a)))))
 
 (def const-true (raw "(0=0)"))
 (def const-false (raw "(0=1)"))
