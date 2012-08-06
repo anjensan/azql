@@ -96,8 +96,8 @@
   (testing "lazy select all entities and collect ids"
     (is (=
          [1 2 3]
-         (with-results [v (select (from :users))]
-           (reduce (fn [s x] (conj s (:id x))) [] v)))))
+         (with-fetch [v (select (from :users))]
+           (reduce #(conj %1 (:id %2)) [] v)))))
 
   (testing "get user by id"
     (is (=
@@ -129,51 +129,33 @@
   (testing "get posts without parent"
     (is (=
          5
-         (count
-          (select
-           (from :comments)
-           (where (= :parentid nil))
-           (fetch-all)))))))
+         (select
+          (from :comments)
+          (where (= :parentid nil))
+          (fetch-all)
+          (count))))))
            
 (deftest test-multi-value-expressions
   (testing "test 'in' operator"
-    (is
-     (=
-      9
-      (select
-       (from :comments)
-       (where (in? :userid [1 2 3]))
-       (fetch-all)
-       (count))))
-    (is
-     (=
-      3
-      (select
-       (from :comments)
-       (where (not-in? :userid [1 3]))
-       (fetch-all)
-       (count))))
-    (is
-     (=
-      0
-      (select
-       (from :comments)
-       (where (in? :userid []))
-       (fetch-all)
-       (count))))
-    (is
-     (=
-      9
-      (select
-       (from :comments)
-       (where (not-in? :userid []))
-       (fetch-all)
-       (count))))
-    (is
-     (=
-      6
-      (select
-       (from :comments)
-       (where (contains? :userid [1 3]))
-       (fetch-all)
-       (count))))))
+    (are [cnt s]
+         (= cnt (count (fetch-all s)))
+         9
+         (select
+          (from :comments)
+          (where (in? :userid [1 2 3])))
+         3
+         (select
+          (from :comments)
+          (where (not-in? :userid [1 3])))
+         0
+         (select
+          (from :comments)
+          (where (in? :userid [])))
+         9
+         (select
+          (from :comments)
+          (where (not-in? :userid [])))
+         6
+         (select
+          (from :comments)
+          (where (contains? :userid [1 3]))))))

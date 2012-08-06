@@ -131,7 +131,7 @@
   (let [{s :sql p :args} (sql relation)]
     (apply vector s p)))
 
-(defmacro with-results
+(defmacro with-fetch
   "Executes a query & evaluates body with 'v' bound to seq of results."
   [[v relation :as vr] & body]
   (assert (vector? vr))
