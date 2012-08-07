@@ -9,17 +9,9 @@
     (is (= #azql.emit.Sql["((? + ? + ?) * (? - ? - ?) * (- ?))" [1 2 3 4 5 6 7]]
            (sql (render-expression [:* [:+ 1 2 3] [:- 4 5 6] [:- 7]]))))
     (is (= #azql.emit.Sql["(\"A\" = ?)" [1]]
-           (sql (render-expression [:= :A 1]))))))
-
-(deftest test-expresison-symbol
-  (testing "expr symbol test"
-    (is (expression-symbol? '>))
-    (is (expression-symbol? '<>))
-    (is (not (expression-symbol? 'conj)))
-    (is (not (expression-symbol? ">")))
-    (is (not (expression-symbol? 1)))
-    (is (not (expression-symbol? nil)))
-    (is (not (expression-symbol? :=)))))
+           (sql (render-expression [:= :A 1]))))
+    (is (= #azql.emit.Sql["(funn(?, ?))" [1 2]]
+           (sql (render-expression [:funn 1 2]))))))
 
 (deftest test-prepare-macro-expr
   (testing "convert macro form to expr-tree"
@@ -31,7 +23,9 @@
          [:<> 1 2] '(not= 1 2)
          '[:+ x :b 3] '(+ x :b 3)
          [:or [:> 1 2] [:< 1 2] [:>= 1 2]] '(or (> 1 2) (< 1 2) (>= 1 2))
-         '[:not [:nil? x]] '(not (nil? x)))))
+         '[:not [:nil? x]] '(not (nil? x))
+         [:sin 1] '(sin 1)
+         [:+ [:sin 1] [:cos :x]] '(+ (sin 1) (cos :x)))))
 
 (deftest test-null-aware-comparasions
   (testing "test null-aware comparasions"

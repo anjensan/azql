@@ -1,6 +1,23 @@
 (ns azql.expression
   (:use [azql util emit]))
 
+(defrecord SqlFunction [fname args]
+  SqlLike
+  (as-sql [this]
+    (sql (raw (str fname "("))
+         (comma-list args)
+         (raw ")"))))
+
+(defn sqlfn
+  "Construct new function, which emits call.
+   Ex: ((sqlfn :x) 1 2) => x(1, 2)"
+  [f]
+  (when-not (re-matches #"\w+" (name f))
+    (illegal-argument "Invalid function name " f))
+  (let [nm (name f)]
+    (fn [& args]
+      (->SqlFunction nm args))))
+
 (def expression-synonym
   {:not= :<>, :== :=, (keyword "/") :div,
    :contains? :in?})
@@ -20,6 +37,10 @@
 
 (def const-true (raw "(0=0)"))
 (def const-false (raw "(0=1)"))
+
+(defn infix-operator
+  [op]
+  (fn [& s] (interpose op s)))
 
 (def expression-render-fn
   {:and (fn [& r] (interpose AND r))
@@ -53,8 +74,13 @@
           (if (empty? b)
             const-false
             [a IN (parenthesis (args-list b))]))
-   :count (fn [r] [COUNT (parenthesis r)])
-   :count-distinct (fn [r] [COUNT (parenthesis [DISTINCT r])])
+   :count (fn
+            ([r] [COUNT (parenthesis r)])
+            ([d r]
+               (case d
+                :distinct [COUNT (parenthesis [DISTINCT r])]
+                nil [COUNT (parenthesis r)]
+                (illegal-argument "Unknown modifier " d))))
    :max (fn [x] [MAX (parenthesis x)])
    :min (fn [x] [MIN (parenthesis x)])
    :avg (fn [x] [AVG (parenthesis x)])
@@ -67,24 +93,20 @@
 
 (defn- find-expr-render-fn
   [f]
-  (expression-render-fn (get expression-synonym f f)))
-
-(defn expression-symbol?
-  [s]
-  (and
-   (symbol? s)
-   (not
-    (nil? (find-expr-render-fn (keyword (name s)))))))
+  (let [s (get expression-synonym f f)]
+    (if-let [c (find expression-render-fn s)]
+      (val c)
+      (sqlfn s))))
 
 (defn prepare-macro-expression
   "Walk tree and replace symbols with keywords.
    Ex: (+ 1 :x) => [:+ 1 :x]"
   [e]
-  (if (and (sequential? e) (expression-symbol? (first e)))
-    (vec
-     (cons
-      (canon-expr-keyword (first e))
-      (map prepare-macro-expression (rest e))))
+  (if (list? e)
+    (let [f (canon-expr-keyword (first e))]
+      (when-not f
+        (illegal-argument "Invalid expression '" e "', unknown operator."))
+      (vec (cons f (map prepare-macro-expression (rest e)))))
     e))
 
 (defn conj-expression
@@ -105,18 +127,3 @@
         (parenthesis (apply ef rs))
         (apply ef rs)))
     etree))
-
-(defrecord SqlFunction [fname args]
-  SqlLike
-  (as-sql [this]
-    (sql [fname (parenthesis (comma-list args))])))
-
-(defn sqlfn
-  "Construct new function, which emits call.
-   Ex: ((sqlfn :x) 1 2) => x(1, 2)"
-  [f]
-  (when-not (re-matches #"\w+" (name f))
-    (illegal-argument "Invalid function name " f))
-  (let [nm (raw (name f))]
-    (fn [& args]
-      (->SqlFunction nm args))))
