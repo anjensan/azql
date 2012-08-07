@@ -82,6 +82,12 @@
     [GROUP_BY (comma-list g)]
     NONE))
 
+(defn renger-having
+  [{h :having}]
+  (if h
+    [HAVING (render-expression h)]
+    NONE))
+
 (defn render-select
   [{:keys [fields tables joins where order] :as relation}]
   [SELECT
@@ -91,4 +97,5 @@
    (render-where relation)
    (render-order relation)
    (render-group relation)
+   (renger-having relation)
    (render-limit relation)])

@@ -126,6 +126,16 @@
     (illegal-state "Relation already has offset " ov))
   (assoc relation :offset v))
 
+(defn having*
+  "Adds 'having' condition to query"
+  [{h :having :as s} c]
+  (assoc s :having (conj-expression h c)))
+
+(defmacro having
+  "Adds 'having' condition to query, support macro expressions"
+  [s c]
+  `(having* ~s ~(prepare-macro-expression c)))
+
 (defn- to-sql-params
   [relation]
   (let [{s :sql p :args} (sql relation)]

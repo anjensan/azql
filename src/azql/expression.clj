@@ -1,5 +1,5 @@
 (ns azql.expression
-  (:use [azql emit]))
+  (:use [azql util emit]))
 
 (def expression-synonym
   {:not= :<>, :== :=, (keyword "/") :div,
@@ -43,8 +43,8 @@
    :> (fn [a b] [a GREATER b])
    :<= (fn [a b] [a LESS_EQUAL b])
    :>= (fn [a b] [a GREATER_EQUAL b])
-   :nil? (fn [x] [IS_NULL x])
-   :not-nil? (fn [x] [IS_NOT_NULL x])
+   :nil? (fn [x] [x IS_NULL])
+   :not-nil? (fn [x] [x IS_NOT_NULL])
    :not-in? (fn [a b]
               (if (empty? b)
                 const-true
@@ -52,7 +52,13 @@
    :in? (fn [a b]
           (if (empty? b)
             const-false
-            [a IN (parenthesis (args-list b))]))})
+            [a IN (parenthesis (args-list b))]))
+   :count (fn [r] [COUNT (parenthesis r)])
+   :count-distinct (fn [r] [COUNT (parenthesis [DISTINCT r])])
+   :max (fn [x] [MAX (parenthesis x)])
+   :min (fn [x] [MIN (parenthesis x)])
+   :avg (fn [x] [AVG (parenthesis x)])
+   :sum (fn [x] [SUM (parenthesis x)])})
 
 (defn- canon-expr-keyword
   [f]
@@ -95,5 +101,22 @@
     (let [[f & r] etree
           ef (find-expr-render-fn f)
           rs (map render-expression r)]
-      (parenthesis (apply ef rs)))
+      (if (not= :count f)
+        (parenthesis (apply ef rs))
+        (apply ef rs)))
     etree))
+
+(defrecord SqlFunction [fname args]
+  SqlLike
+  (as-sql [this]
+    (sql [fname (parenthesis (comma-list args))])))
+
+(defn sqlfn
+  "Construct new function, which emits call.
+   Ex: ((sqlfn :x) 1 2) => x(1, 2)"
+  [f]
+  (when-not (re-matches #"\w+" (name f))
+    (illegal-argument "Invalid function name " f))
+  (let [nm (raw (name f))]
+    (fn [& args]
+      (->SqlFunction nm args))))

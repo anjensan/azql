@@ -103,4 +103,11 @@
          "SELECT a FROM T GROUP BY a"
          (select (from "T") (group [:a]) (fields [:a]))
          "SELECT a, b FROM T GROUP BY a, b"
-         (select (from "T") (group [:a :b]) (fields [:a :b])))))
+         (select (from "T") (group [:a :b]) (fields [:a :b]))))
+  (testing "test grouping with having on"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM T GROUP BY a HAVING (a > ?)"
+         (select (from "T") (group [:a]) (having (> :a 1)))
+         "SELECT a, b FROM T GROUP BY a, b HAVING ((a > ?) AND (? < b))"
+         (select (from "T") (group [:a, :b]) (fields [:a :b])
+                 (having (> :a 1)) (having (< 2 :b))))))

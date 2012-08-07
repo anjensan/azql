@@ -159,3 +159,20 @@
          (select
           (from :comments)
           (where (contains? :userid [1 3]))))))
+
+(deftest test-aggregate-expressions
+  (is
+   (= 3
+      (select
+       (from :users)
+       (fields {:x (count :*)})
+       (fetch-single))))
+  (is
+   (= 1
+      (select
+       (fields [:parentid])
+       (from :comments)
+       (group [:parentid])
+       (where (not-nil? :parentid))
+       (having (> (count :id) 2))
+       (fetch-single)))))
