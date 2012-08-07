@@ -13,11 +13,11 @@
 (defn- render-table
   [[alias nm]]
   (let [t (as-table-or-subquery nm)]
-    (if (= alias t) t [t alias])))
+    (if (= alias t) t [t AS alias])))
 
 (defn render-field
   [[alias nm]]
-  (if (= alias nm) nm [(render-expression nm) alias]))
+  (if (= alias nm) nm [(render-expression nm) AS alias]))
 
 (defn render-fields
   [{:keys [fields tables]}]

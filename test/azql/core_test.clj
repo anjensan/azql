@@ -7,16 +7,16 @@
 (deftest test-simple-queries
   (testing "simple selects from one table"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT * FROM Table1 a"
+         "SELECT * FROM Table1 AS a"
          (select (from :a "Table1"))
-         "SELECT DISTINCT * FROM Table1 a"
+         "SELECT DISTINCT * FROM Table1 AS a"
          (select (modifier :distinct) (from :a "Table1"))
          "SELECT * FROM Table1"
          (select (from "Table1"))
-         "SELECT a.* FROM Table1 a"
+         "SELECT a.* FROM Table1 AS a"
          (select (from :a "Table1")
                  (fields [:a.*]))
-         "SELECT a x, a.b Y, c FROM Table1 a"
+         "SELECT a AS x, a.b AS Y, c FROM Table1 AS a"
          (select (from :a "Table1")
                  (fields* (array-map :x :a, :Y :a.b, :c :c)))))
 
@@ -24,9 +24,9 @@
     (are [s z] (= s (:sql (sql z)))
          "SELECT * FROM A, B"
          (select (from "A") (from "B"))
-         "SELECT * FROM Table1 a, Table2 b"
+         "SELECT * FROM Table1 AS a, Table2 AS b"
          (select (from :a "Table1") (from :b "Table2")))
-         "SELECT * FROM A a,  B b"
+         "SELECT * FROM A AS a, B AS b"
          (select (from :a "A") (from :b "B"))))
 
 (deftest test-where-clause
@@ -48,31 +48,31 @@
 (deftest test-complex-fields
   (testing "select expression"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT (a + b) c FROM Table"
+         "SELECT (a + b) AS c FROM Table"
          (select (from "Table") (fields {:c (+ :a :b)}))
-         "SELECT (a * b * c) z FROM Table"
+         "SELECT (a * b * c) AS z FROM Table"
          (select (from "Table") (fields {:z (* :a :b :c)})))))
 
 (deftest test-joins
   (testing "test cross join"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT * FROM A a CROSS JOIN B b"
+         "SELECT * FROM A AS a CROSS JOIN B AS b"
          (select
           (from :a "A")
           (join-cross :b "B"))
-         "SELECT * FROM A a CROSS JOIN B b CROSS JOIN C c"
+         "SELECT * FROM A AS a CROSS JOIN B AS b CROSS JOIN C AS c"
          (select
           (join-cross :a "A")
           (join-cross :b "B")
           (join-cross :c "C"))
-         "SELECT * FROM A a CUSTOM JOIN B b"
+         "SELECT * FROM A AS a CUSTOM JOIN B AS b"
          (select
           (from :a "A")
           (join* (raw "CUSTOM JOIN") :b "B" nil))))
   
   (testing "test inner joins"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT * FROM A a INNER JOIN B b ON (a.x = b.y)"
+         "SELECT * FROM A AS a INNER JOIN B AS b ON (a.x = b.y)"
          (select
           (from :a "A")
           (join :b "B" (= :a.x :b.y))))))
@@ -80,13 +80,13 @@
 (deftest test-order-by
   (testing "test simple orderby"
     (are [s z] (= s (:sql (sql z)))
-         "SELECT * FROM A a ORDER BY x"
+         "SELECT * FROM A AS a ORDER BY x"
          (select (from :a "A") (order :x))
-         "SELECT * FROM A a ORDER BY x ASC"
+         "SELECT * FROM A AS a ORDER BY x ASC"
          (select (from :a "A") (order :x :asc))
-         "SELECT * FROM A a ORDER BY x DESC"
+         "SELECT * FROM A AS a ORDER BY x DESC"
          (select (from :a "A") (order :x :desc))
-         "SELECT * FROM A a ORDER BY a.x, a.y ASC, a.z DESC"
+         "SELECT * FROM A AS a ORDER BY a.x, a.y ASC, a.z DESC"
          (select (from :a "A") (order :a.z :desc) (order :a.y :asc) (order :a.x)))))
 
 (deftest test-limit-and-offset
