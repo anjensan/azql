@@ -38,10 +38,6 @@
 (def const-true (raw "(0=0)"))
 (def const-false (raw "(0=1)"))
 
-(defn infix-operator
-  [op]
-  (fn [& s] (interpose op s)))
-
 (def expression-render-fn
   {:and (fn [& r] (interpose AND r))
    :or  (fn [& r] (interpose OR r))
@@ -86,17 +82,38 @@
    :avg (fn [x] [AVG (parenthesis x)])
    :sum (fn [x] [SUM (parenthesis x)])})
 
+(defn- render-operator
+  "Render generic infix operator"
+  ([f x] [(raw (name f)) x])
+  ([f x & r] (interpose (raw (name f)) (cons x r))))
+
+(defn- render-function
+  "Render generic function"
+ ([f] [(raw (name f)) (raw "()")])
+ ([f & r]
+    [(raw (str (name f) "("))
+     (comma-list r)
+     (raw ")")]))
+
+(defn operator-keyword?
+  [f]
+  (let [fch (char (get (name f) 0))]
+    (not (Character/isLetterOrDigit fch))))
+
 (defn- canon-expr-keyword
   [f]
-  (let [k (keyword (name f))]
-    (get expression-synonym k k)))
+  (if (:sqlfn (meta f))
+    f
+    (let [k (keyword (name f))]
+      (get expression-synonym k k))))
 
 (defn- find-expr-render-fn
   [f]
   (let [s (get expression-synonym f f)]
     (if-let [c (find expression-render-fn s)]
       (val c)
-      (sqlfn s))))
+      (let [op (operator-keyword? s)]
+        (partial (if op render-operator render-function) s)))))
 
 (defn prepare-macro-expression
   "Walk tree and replace symbols with keywords.
