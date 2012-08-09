@@ -1,6 +1,6 @@
 (ns azql.integration-test
   (:use clojure.test)
-  (:use azql.core)
+  (:use [azql core emit])
   (:require [clojure.java.jdbc :as jdbc]))
 
 (def h2-database-connection
@@ -176,3 +176,10 @@
        (where (not-nil? :parentid))
        (having (> (count :id) 2))
        (fetch-single)))))
+
+(deftest test-raw-queries
+  (is (= 3 (count (fetch-all (sql '(select * from :users))))))
+  (is (= 3 (fetch-single
+            (sql ['select 'count LP '* RP 'from :users])))))
+   
+      

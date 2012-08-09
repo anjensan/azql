@@ -119,7 +119,7 @@
  [kname value] (def kname (raw value))
 
  NONE "", COMMA ",",ASTERISK "*",
- LEFT_PAREN "(", RIGHT_PAREN ")",
+ LP "(", RP ")",
  EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
  LESS_EQUAL "<=", GREATER_EQUAL ">=",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
@@ -128,7 +128,7 @@
 (defn parenthesis
   "Surrounds expression into parenthesis."
   [e]
-  [LEFT_PAREN e RIGHT_PAREN])
+  [LP e RP])
 
 (defn comma-list
   "Interpose values with comma"
