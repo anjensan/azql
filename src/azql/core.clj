@@ -1,6 +1,5 @@
 (ns azql.core
-  (:use [azql util expression emit
-         [render :only [render-select]]])
+  (:use [azql util expression emit render])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
@@ -166,9 +165,10 @@
   "Extract sinlge value from resultset. Useful for aggreagate functions."
   [r]
   (let [x (one-result r)]
-    (when (not= 1 (count r))
-      (throw (IllegalStateException. "There is more than 1 columns in record.")))
-    (val (first x))))
+    (when (not (nil? x))
+      (when (not= 1 (count r))
+        (throw (IllegalStateException. "There is more than 1 columns in record.")))
+      (val (first x)))))
 
 (defn fetch-one
   "Executes query and return first element or throws exceptions
@@ -180,3 +180,69 @@
   "Executes quiery and return single result value. Useful for aggregate functions"
   [relation]
   (jdbc/with-query-results* (to-sql-params relation) single-result))
+
+;; updates
+
+(defn execute!
+  "Execute update statement."
+  [query]
+  (let [{s :sql a :args} (sql query)]
+    (first
+     (jdbc/do-prepared s a))))
+
+(defn execute-batch!
+  "Execute batch statement."
+  [query]
+  (let [{s :sql a :args} (sql query)]
+    (apply jdbc/do-prepared s a)))
+
+(defrecord Insert [table fields records]
+  SqlLike
+  (as-sql [this]
+    (sql (render-insert this))))
+
+(defn values
+  "Add one record to insert statement."
+  [insert records]
+  (let [records (if (map? records) [records] (seq records))]
+    (assoc insert
+      :records (into (:records insert) records))))
+
+(defrecord Delete [tables joins where]
+  SqlLike
+  (as-sql [this]
+    (sql (render-delete this))))
+
+(defn delete*
+  "Create new delete statement."
+  ([] (->Delete nil nil nil))
+  ([table] (->Delete table nil nil)))
+
+(defn insert*
+  "Create new insert statement."
+  ([table] (->Insert table nil []))
+  ([table records] (values (insert* table) records)))
+
+(defmacro delete!
+  "Delete records from a table."
+  [& body]
+  `(execute!
+    ~(emit-threaded-expression delete* body)))
+
+(defn execute-insert!
+  "Execute insert quiery.
+   If a single record is inserted, return map of the generated keys."
+  [{r :records :as query}]
+  (execute-batch! query))
+
+(defmacro insert!
+  "Insert new record into a table.
+   If a single record is inserted, return map of the generated keys."
+  [& body]
+  `(execute-insert!
+    ~(emit-threaded-expression insert* body)))
+
+
+  
+  
+     

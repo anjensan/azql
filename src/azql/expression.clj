@@ -2,7 +2,7 @@
   (:use [azql util emit]))
 
 (def expression-synonym
-  {'not= '<>, '== '=, 'contains? 'in?})
+  {'not= '<>, '== '=})
 
 (defn- args-list-size
   [c]

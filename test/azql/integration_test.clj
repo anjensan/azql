@@ -12,17 +12,17 @@
   []
   (jdbc/create-table
    :users
-   [:id "INT" "PRIMARY KEY"]
+   [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
    [:name "VARCHAR(50)"]
    [:dob "DATE"])
   (jdbc/create-table
    :posts
-   [:id "INT" "PRIMARY KEY"]
+   [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
    [:text "VARCHAR(10000)"]
    [:userid "INT"])
   (jdbc/create-table
    :comments
-   [:id "INT" "PRIMARY KEY"]
+   [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
    [:text "VARCHAR(500)"]
    [:userid "INT"]
    [:postid "INT"]
@@ -158,7 +158,7 @@
          6
          (select
           (from :comments)
-          (where (contains? :userid [1 3]))))))
+          (where (in? :userid [1 3]))))))
 
 (deftest test-aggregate-expressions
   (is
@@ -181,5 +181,20 @@
   (is (= 3 (count (fetch-all (sql '(select * from :users))))))
   (is (= 3 (fetch-single
             (sql ['select 'count LP '* RP 'from :users])))))
+
+(deftest test-insert
+  
+  (testing "insert single record"
+    (insert! :users {:name "New User" :dob #inst"1988-03-21T00:00"})
+    (is (select (from :users) (where (= :name "New User")) (fetch-one)))
+    (delete! (from :users) (where (= :name "New User")))
+    (is (not (select (from :users) (where (= :name "New User")) (fetch-one)))))
+  
+  (testing "insert multiple records"
+    (insert! :posts (values {:text "New Post 1"}) (values {:text "New Post 2" :userid 1}))
+    (is (= 1 (select (from :posts) (fields [:userid]) (where (= :text "New Post 2")) (fetch-single))))
+    (delete! (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
+    (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))
+    
    
       

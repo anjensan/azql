@@ -17,7 +17,7 @@
            (sql [(raw "SELECT") :* (raw "FROM") :Table])))
     (is (= (->Sql "A  a B C D" ())
            (sql [[(raw "A  a") [(raw "B")]] [[[]]] [(raw "C")] (raw "D")])))
-    (is (= (->Sql "A ( () )  ,  BC" ())
+    (is (= (->Sql "A ( () )  ,  BC" nil)
            (sql (raw "A ( () )  ,  BC"))))
     (is (= (->Sql "\"A\"" ())
            (sql :A)))

@@ -1,5 +1,6 @@
 (ns azql.render
-  (:use [azql util emit expression]))
+  (:use [azql util emit expression])
+  (:require [clojure.set :as cset]))
 
 (defn- as-table-or-subquery
   "Converts value to table name or subquery.
@@ -89,7 +90,7 @@
     NONE))
 
 (defn render-select
-  [{:keys [fields tables joins where order] :as relation}]
+  [relation]
   [SELECT
    (render-modifier relation)
    (render-fields relation)
@@ -99,3 +100,35 @@
    (render-group relation)
    (renger-having relation)
    (render-limit relation)])
+
+(defn render-delete
+  [query]
+  [DELETE
+   (render-from query)
+   (render-where query)])
+
+(defn render-into
+  [{t :table}]
+  [INTO (qname t)])
+
+(defn collect-fields
+  [records]
+  (reduce cset/union (map (comp set keys) records)))
+
+(defn render-values
+  [{f :fields records :records}]
+  (let [fields (if f f (collect-fields records))]
+    (->Sql
+     (:sql
+      (sql
+       (parenthesis (comma-list fields))
+       VALUES
+       (parenthesis
+        (comma-list (repeat (count fields) QMARK)))))
+     (map (fn [r] (map #(get r %) fields)) records))))
+
+(defn render-insert
+  [query]
+  [INSERT
+   (render-into query)
+   (render-values query)])
