@@ -38,8 +38,7 @@
   [FROM
    (let [[a jn] (first joins)
          t (tables a)]
-     (when-not (contains? #{nil :cross} jn)
-       (illegal-state "First join should be CROSS JOIN"))
+     (check-state  (contains? #{nil :cross} jn) "First join should be CROSS JOIN.")
      (render-table [a t]))
    (for [[a jn c] (rest joins) :let [t (tables a)]]
      (if (nil? jn)

@@ -77,15 +77,11 @@
   
   (testing "select all entities from table (test count)"
     (are [c tbl] (= c (count (select (from tbl) (fetch-all))))
-         3 :users
-         4 :posts
-         9 :comments))
+         3 :users, 4 :posts, 9 :comments))
   
   (testing "select all entities (order by name)"
     (is (=
-         [{:id 2 :name "Anton"}
-          {:id 3 :name "Arturas"}
-          {:id 1 :name "Artyom"}]
+         [{:id 2 :name "Anton"}, {:id 3 :name "Arturas"}, {:id 1 :name "Artyom"}]
          (select
           (fields [:id :name])
           (from :users)
@@ -96,44 +92,25 @@
   (testing "lazy select all entities and collect ids"
     (is (=
          [1 2 3]
-         (with-fetch [v (select (from :users))]
-           (reduce #(conj %1 (:id %2)) [] v)))))
+         (with-fetch [v (select (from :users))] (reduce #(conj %1 (:id %2)) [] v)))))
 
   (testing "get user by id"
     (is (=
          {:id 2 :n "Anton"}
-         (select
-          (from :users)
-          (fields {:id :id :n :name})
-          (where (= :id 2))
-          (fetch-one)))))
+         (select (from :users) (fields {:id :id :n :name}) (where (= :id 2)) (fetch-one)))))
   
   (testing "get user name by id"
     (is (=
          {:name "Arturas"}
-         (select
-          (fields [:name])
-          (from :users)
-          (where (= :id 3))
-          (fetch-one)))))
-
+         (select (fields [:name]) (from :users) (where (= :id 3)) (fetch-one)))))
+  
   (testing "get only user name"
     (is (=
          "Arturas"
-         (select
-          (from :users)
-          (where (= :id 3))
-          (fields [:name])
-          (fetch-single)))))
-
+         (select (from :users) (where (= :id 3)) (fields [:name]) (fetch-single)))))
+  
   (testing "get posts without parent"
-    (is (=
-         5
-         (select
-          (from :comments)
-          (where (= :parentid nil))
-          (fetch-all)
-          (count))))))
+    (is (= 5 (select (from :comments) (where (= :parentid nil)) (fetch-all) (count))))))
            
 (deftest test-multi-value-expressions
   (testing "test 'in' operator"
@@ -161,21 +138,10 @@
           (where (in? :userid [1 3]))))))
 
 (deftest test-aggregate-expressions
-  (is
-   (= 3
-      (select
-       (from :users)
-       (fields {:x (count :*)})
-       (fetch-single))))
-  (is
-   (= 1
-      (select
-       (fields [:parentid])
-       (from :comments)
-       (group [:parentid])
-       (where (not-nil? :parentid))
-       (having (> (count :id) 2))
-       (fetch-single)))))
+  (is (= 3 (select (from :users) (fields {:x (count :*)}) (fetch-single))))
+  (is (= 1 (select (fields [:parentid]) (from :comments)
+                   (group [:parentid]) (where (not-nil? :parentid))
+                   (having (> (count :id) 2)) (fetch-single)))))
 
 (deftest test-raw-queries
   (is (= 3 (count (fetch-all (sql '(select * from :users))))))
@@ -197,14 +163,11 @@
     (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))
 
 (deftest test-update
-
+  
   (testing "update one record"
     (update! :users (setf :name "XXX") (where (= :name "Anton")))
     (is (= 1 (select (from :users) (where (= :name "XXX")) (fetch-all) (count)))))
-
+  
   (testing "update all records"
     (update! :users (setf :name "XXX"))
     (is (= 3 (select (from :users) (where (= :name "XXX")) (fetch-all) (count))))))
-    
-   
-      

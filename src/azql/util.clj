@@ -19,5 +19,15 @@
 (defn illegal-state [& msg]
   (throw (IllegalStateException. (s/join msg))))
 
+(defmacro check-argument
+  [c msg]
+  `(when (not ~c)
+     (illegal-argument ~msg)))
+
+(defmacro check-state
+  [c msg]
+  `(when (not ~c)
+     (illegal-state ~msg)))
+
 (defn todo []
   (throw (UnsupportedOperationException. "TODO")))

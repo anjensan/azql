@@ -47,8 +47,7 @@
   "Adds join section to query."
   [{:keys [tables joins] :as relation} type alias table cond]
   (let [a (as-alias alias)]
-    (when (contains? tables a)
-      (illegal-argument "Relation already has table " a))
+    (check-state (not (contains? table a)) (str "Relation already has table " a))
     (assoc relation
       :tables (assoc tables a table)
       :joins (conj (vec joins) [a type cond]))))
@@ -73,8 +72,7 @@
 (defn fields*
   "Add fieldlist to query"
   [s fd]
-  (when (:fields s)
-    (illegal-argument "Relation already has specified fields"))
+  (check-argument (nil? (:fields s)) "Relation already has specified fields")
   (assoc s :fields fd))
 
 (defn- prepare-fields
@@ -102,42 +100,37 @@
   "Adds 'order by' section to query"
   ([relation column] (order relation column nil))
   ([{order :order :as relation} column dir]
-     (when (not (contains? #{:asc :desc nil} dir))
-       (illegal-argument "Invalig sort direction " dir))
+     (check-argument
+      (contains? #{:asc :desc nil} dir)
+      (str "Invalid sort direction " dir))
      (assoc relation
        :order (cons [column dir] order))))
 
 (defn group
   "Adds 'group by' section to quiery"
   [{g :group :as relation} fields]
-  (when g
-    (illegal-state "Relation already has grouping " g))
+  (check-state (nil? g) (str "Relation already has grouping " g))
   (let [f (if (sequential? fields) fields [fields])]
     (assoc relation
       :group f)))
 
 (defn modifier
   [{cm :modifier :as relation} m]
-  (when cm
-    (illegal-state "Relation already has modifier " cm))
+  (check-state (nil? cm) (str "Relation already has modifier " cm))
   (assoc relation :modifier m))
 
 (defn limit
   "Limit number of rows"
   [{ov :limit :as relation} v]
-  (when (not (integer? v))
-    (illegal-argument "Limit should be integer"))
-  (when ov
-    (illegal-state "Relation already has limit " ov))
+  (check-argument (integer? v) "Limit must be integer")
+  (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
   "Adds an offset to relation"
   [{ov :offset :as relation} v]
-  (when (not (integer? v))
-    (illegal-argument "Offset should be integer"))
-  (when ov
-    (illegal-state "Relation already has offset " ov))
+  (check-argument (integer? v) "Offset must be integer")
+  (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 
 (defn having*
@@ -171,9 +164,7 @@
 (defn- one-result
   "Extracts one record from resultset."
   [r]
-  (when (< 1 (count r))
-    (println (vec r))
-    (throw (IllegalStateException. "There is more than 1 record in resultset.")))
+  (check-argument (>= 1 (count r)) "There is more than 1 record in resultset.")
   (first r))
 
 (defn- single-result
@@ -181,8 +172,7 @@
   [r]
   (let [x (one-result r)]
     (when (not (nil? x))
-      (when (not= 1 (count r))
-        (throw (IllegalStateException. "There is more than 1 columns in record.")))
+      (check-state (== 1 (count r)) "There is more than 1 columns in record.")
       (val (first x)))))
 
 (defn fetch-one
@@ -209,18 +199,15 @@
   "Executes update statement and returns generated keys."
   [query]
   (let [{s :sql a :args} (sql query)]
-    (when-not (= 1 (count a))
-      (illegal-argument "Can't execute batch statement and return generated keys."))
+    (check-argument (= 1 (count a)) "Can't return generated keys for batch query.")
     (jdbc/do-prepared-return-keys s (first a))))
 
 (defn execute-batch!
   "Execute batch statement."
   [query]
   (let [{s :sql a :args} (sql query)]
-    (when-not (every? sequential? a)
-      (illegal-state "Some arguments is not sequences."))
-    (when-not (reduce = (map count a))
-      (illegal-state "Argument vectors has different lengths."))
+    (check-state (every? sequential? a) "Some arguments is not sequences.")
+    (check-state (reduce = (map count a)) "Argument vectors has different lengths.")
     (apply jdbc/do-prepared s a)))
 
 (defn values
@@ -251,7 +238,6 @@
   [query fname value]
   (assoc query :fields (assoc (:fields query) fname value)))
 
-
 (defmacro delete!
   "Delete records from a table."
   [& body]
@@ -278,8 +264,3 @@
   [& body]
   `(execute!
     ~(emit-threaded-expression update* body)))
-
-
-  
-  
-     
