@@ -33,9 +33,10 @@
 (defn qualifier
   "Return first part of qualified name. Ex: :a.val => :a, :x => nil"
   [qname]
-  (let [n (parse-qname qname)]
-    (when (> (count n) 1)
-      (first n))))
+  (when qname
+    (let [n (parse-qname qname)]
+      (when (> (count n) 1)
+        (first n)))))
 
 (defn ^:dynamic quote-name
   "Quote name."
@@ -97,13 +98,13 @@
   (as-sql [this] (arg nil)))
 
 (defn sql
-  "Convert object to Sql"
+  "Converts object to Sql."
   ([v]
      (if (sql? v)
        v
        (let [v (as-sql v)]
          (assoc v :args (vec (:args v)) :sql (s/trim (:sql v))))))
-  ([v & r] (sql (list* v r))))
+  ([v & r] (sql (cons v r))))
 
 (do-template
  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))

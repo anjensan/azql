@@ -2,9 +2,10 @@
   (:require [clojure.string :as s]))
 
 (defn map-vals
-  "Apply f to the values of map m. Returns new map"
+  "Apply f to the values of map m. Always returns new map.
+   Returns empty hash map if `m` is nil."
   [f m]
-  (into (empty m) (for [[k v] m] [k (f v)])))
+  (into (if (map? m) (empty m) {}) (for [[k v] m] [k (f v)])))
 
 (defn emit-threaded-expression
   "Executes 'sfun' with first constant values from 'body' as arguments
@@ -28,6 +29,3 @@
   [c msg]
   `(when (not ~c)
      (illegal-state ~msg)))
-
-(defn todo []
-  (throw (UnsupportedOperationException. "TODO")))
