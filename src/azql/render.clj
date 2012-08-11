@@ -115,8 +115,8 @@
   (reduce cset/union (map (comp set keys) records)))
 
 (defn render-values
-  [{f :fields records :records}]
-  (let [fields (if f f (collect-fields records))]
+  [{fields :fields records :records}]
+  (let [fields (if fields fields (collect-fields records))]
     (->Sql
      (:sql
       (sql
@@ -124,7 +124,11 @@
        VALUES
        (parenthesis
         (comma-list (repeat (count fields) QMARK)))))
-     (map (fn [r] (map #(get r %) fields)) records))))
+     (if (> (count records) 1)
+       (map
+        (fn [f] (with-meta (map f records) {:batch true}))
+        fields)
+       (map (partial get (first records)) fields)))))
 
 (defn render-insert
   [query]

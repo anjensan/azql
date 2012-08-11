@@ -149,9 +149,10 @@
             (sql ['select 'count LP '* RP 'from :users])))))
 
 (deftest test-insert
-  
+
   (testing "insert single record"
     (insert! :users {:name "New User" :dob #inst"1988-03-21T00:00"})
+    (select (from :users) (fetch-all))
     (is (select (from :users) (where (= :name "New User")) (fetch-one)))
     (delete! (from :users) (where (= :name "New User")))
     (is (not (select (from :users) (where (= :name "New User")) (fetch-one)))))

@@ -195,20 +195,39 @@
     (first
      (jdbc/do-prepared s a))))
 
+(defn- batch-arg?
+  [v]
+  (and (sequential? v) (:batch (meta v))))
+
 (defn execute-return-keys!
   "Executes update statement and returns generated keys."
   [query]
   (let [{s :sql a :args} (sql query)]
-    (check-argument (= 1 (count a)) "Can't return generated keys for batch query.")
-    (jdbc/do-prepared-return-keys s (first a))))
+    (check-argument
+     (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
+     "Can't return generated keys for batch query.")
+    (jdbc/do-prepared-return-keys s (map #(if (batch-arg? %) (first %) %) a))))
+
+(defn- prepare-batch-arguments
+  [arguments]
+  (if-let [ba (first (filter batch-arg? arguments))]
+    (let [cnt (count ba)
+          aseqs (map (fn [a]
+                       (if-not (batch-arg? a)
+                         (repeat cnt a)
+                         (do
+                           (check-state (= cnt (count a))
+                                        "Batch argument vectors has different lengths.")
+                           a)))
+                     arguments)]
+      (apply map vector aseqs))
+    arguments))
 
 (defn execute-batch!
   "Execute batch statement."
   [query]
   (let [{s :sql a :args} (sql query)]
-    (check-state (every? sequential? a) "Some arguments is not sequences.")
-    (check-state (reduce = (map count a)) "Argument vectors has different lengths.")
-    (apply jdbc/do-prepared s a)))
+    (apply jdbc/do-prepared s (prepare-batch-arguments a))))
 
 (defn values
   "Add records to insert statement."

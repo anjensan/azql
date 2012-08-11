@@ -1,4 +1,5 @@
 (ns azql.emit
+  (:use azql.util)
   (:require [clojure.string :as s])
   (:use clojure.template))
 
@@ -19,9 +20,14 @@
   ([text] (Sql. (str text) nil)))
 
 (defn arg
-  "Constructs new parameter. Use vectors for batch queries."
+  "Constructs new parameter."
   [value]
   (Sql. "?" [value]))
+
+(defn batch-arg
+  "Construct new batch parameter."
+  [values]
+  (Sql. "?" [(with-meta values {:batch true})]))
 
 (defn parse-qname
   "Split qualified name and return first part. Ex :a.val => [:a :val]"
@@ -85,9 +91,11 @@
 (extend-protocol SqlLike
   clojure.lang.Sequential
   (as-sql [this]
-    (let [s (map as-sql (flatten this))]
-       (Sql. (join-sql-strings (map :sql s))
-             (mapcat :args s))))
+    (if (:batch (meta this))
+      (batch-arg this)
+      (let [s (map as-sql (eager-filtered-flatten this #(not (:batch (meta %)))))]
+        (Sql. (join-sql-strings (map :sql s))
+              (mapcat :args s)))))
   clojure.lang.Keyword
   (as-sql [this] (qname this))
   clojure.lang.Symbol
@@ -103,7 +111,7 @@
      (if (sql? v)
        v
        (let [v (as-sql v)]
-         (assoc v :args (vec (:args v)) :sql (s/trim (:sql v))))))
+         (assoc v :args (vec (:args v))))))
   ([v & r] (sql (cons v r))))
 
 (do-template
