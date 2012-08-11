@@ -195,6 +195,16 @@
     (is (= 1 (select (from :posts) (fields [:userid]) (where (= :text "New Post 2")) (fetch-single))))
     (delete! (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
     (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))
+
+(deftest test-update
+
+  (testing "update one record"
+    (update! :users (setf :name "XXX") (where (= :name "Anton")))
+    (is (= 1 (select (from :users) (where (= :name "XXX")) (fetch-all) (count)))))
+
+  (testing "update all records"
+    (update! :users (setf :name "XXX"))
+    (is (= 3 (select (from :users) (where (= :name "XXX")) (fetch-all) (count))))))
     
    
       

@@ -132,3 +132,15 @@
   [INSERT
    (render-into query)
    (render-values query)])
+
+(defn render-update-fields
+  [{:keys [fields]}]
+  (comma-list
+   (map (fn [[n c]] [SET (qname n) EQUALS (render-expression c)]) fields)))
+
+; TODO: add joins
+(defn render-update
+  [{t :table :as query}]
+  [UPDATE (render-table t)
+   (render-update-fields query)
+   (render-where query)])

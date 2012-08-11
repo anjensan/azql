@@ -13,6 +13,21 @@
   SqlLike
   (as-sql [this] (sql (render-select this))))
 
+(defrecord Insert [table fields records]
+  SqlLike
+  (as-sql [this]
+    (sql (render-insert this))))
+
+(defrecord Delete [tables joins where]
+  SqlLike
+  (as-sql [this]
+    (sql (render-delete this))))
+
+(defrecord Update [table fields where]
+  SqlLike
+  (as-sql [this]
+    (sql (render-update this))))
+
 (defn select*
   "Creates empty select."
   []
@@ -184,44 +199,58 @@
 ;; updates
 
 (defn execute!
-  "Execute update statement."
+  "Executes update statement."
   [query]
   (let [{s :sql a :args} (sql query)]
     (first
      (jdbc/do-prepared s a))))
 
+(defn execute-return-keys!
+  "Executes update statement and returns generated keys."
+  [query]
+  (let [{s :sql a :args} (sql query)]
+    (when-not (= 1 (count a))
+      (illegal-argument "Can't execute batch statement and return generated keys."))
+    (jdbc/do-prepared-return-keys s (first a))))
+
 (defn execute-batch!
   "Execute batch statement."
   [query]
   (let [{s :sql a :args} (sql query)]
+    (when-not (every? sequential? a)
+      (illegal-state "Some arguments is not sequences."))
+    (when-not (reduce = (map count a))
+      (illegal-state "Argument vectors has different lengths."))
     (apply jdbc/do-prepared s a)))
 
-(defrecord Insert [table fields records]
-  SqlLike
-  (as-sql [this]
-    (sql (render-insert this))))
-
 (defn values
-  "Add one record to insert statement."
+  "Add records to insert statement."
   [insert records]
   (let [records (if (map? records) [records] (seq records))]
     (assoc insert
       :records (into (:records insert) records))))
 
-(defrecord Delete [tables joins where]
-  SqlLike
-  (as-sql [this]
-    (sql (render-delete this))))
-
 (defn delete*
   "Create new delete statement."
   ([] (->Delete nil nil nil))
-  ([table] (->Delete table nil nil)))
+  ([table] (from (delete*) table))
+  ([alias table] (from (delete*) alias table)))
 
 (defn insert*
   "Create new insert statement."
   ([table] (->Insert table nil []))
   ([table records] (values (insert* table) records)))
+
+(defn update*
+  "Create new update statement"
+  ([table] (update* table table))
+  ([alias table] (->Update [alias table] nil nil)))
+
+(defn setf
+  "Add field to update statement"
+  [query fname value]
+  (assoc query :fields (assoc (:fields query) fname value)))
+
 
 (defmacro delete!
   "Delete records from a table."
@@ -233,7 +262,9 @@
   "Execute insert quiery.
    If a single record is inserted, return map of the generated keys."
   [{r :records :as query}]
-  (execute-batch! query))
+  (if (= 1 (count r))
+    (execute-return-keys! query)
+    (execute-batch! query)))
 
 (defmacro insert!
   "Insert new record into a table.
@@ -241,6 +272,12 @@
   [& body]
   `(execute-insert!
     ~(emit-threaded-expression insert* body)))
+
+(defmacro update!
+  "Executes update statement"
+  [& body]
+  `(execute!
+    ~(emit-threaded-expression update* body)))
 
 
   
