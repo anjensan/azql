@@ -69,4 +69,8 @@
 
 (deftest test-helpers
   (is (= "((?) = (?))" (:sql (sql (parenthesis [(parenthesis 1) '= (parenthesis 2)])))))
-  (is (= "?, ?, ?" (:sql (sql (comma-list [1 2 3]))))))
+  (is (= "? + ?" (:sql (sql (remove-parenthesis (parenthesis [1 '+ 2]))))))
+  (is (= "?, ?, ?" (:sql (sql (comma-list [1 2 3])))))
+  (is (= "?, ?" (:sql (sql (comma-list [(parenthesis 1) 2])))))
+  (is (= 123 (remove-parenthesis (parenthesis 123))))
+  (is (= 123 (remove-parenthesis 123))))

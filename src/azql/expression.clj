@@ -73,7 +73,7 @@
 
 (defn render-generic-function
   "Render generic function"
- ([f] [(raw (name f)) (raw "()")])
+ ([f] (raw (str (name f) "()")))
  ([f & r]
     [(raw (str (name f) "("))
      (comma-list r)
@@ -95,7 +95,7 @@
   [f r]
   (let [s (expression-synonym f f)]
     (if-let [c (default-expression-rendering-fns s)]
-      (apply c r)
+      (parenthesis (apply c r))
       (if (operator? s)
         (apply render-generic-operator f r)
         (apply render-generic-function f r)))))
@@ -124,6 +124,5 @@
   (if (and (sequential? etree) (symbol? (first etree)))
     (let [[f & r] etree
           rs (map render-expression r)]
-      (parenthesis
-       (render-operator-or-function f rs)))
+      (render-operator-or-function f rs))
     etree))

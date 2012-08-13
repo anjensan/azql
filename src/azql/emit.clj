@@ -134,9 +134,14 @@
 (defn parenthesis
   "Surrounds expression with parenthesis."
   [e]
-  [LP e RP])
+  ^{::orig e} [LP e RP])
+
+(defn remove-parenthesis
+  "Remove parenthesis"
+  [e]
+  (or (::orig (meta e)) e))
 
 (defn comma-list
   "Returns values separated by comma."
   [values]
-  (interpose COMMA values))
+  (interpose COMMA (map remove-parenthesis values)))

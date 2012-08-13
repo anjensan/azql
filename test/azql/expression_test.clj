@@ -2,7 +2,7 @@
   (:use [azql expression emit])
   (:use clojure.test))
 
-(deftest test-render-expr
+(deftest test-render-expression
   (testing "test rendering of expressions"
     (is (= #azql.emit.Sql["((? > ?) AND (? < ?))" [1 2 3 4]]
            (sql (render-expression ['and ['> 1 2] ['< 3 4]]))))
@@ -10,8 +10,18 @@
            (sql (render-expression ['* ['+ 1 2 3] ['- 4 5 6] ['- 7]]))))
     (is (= #azql.emit.Sql["(\"A\" = ?)" [1]]
            (sql (render-expression ['= :A 1]))))
-    (is (= #azql.emit.Sql["(funn(?, ?))" [1 2]]
-           (sql (render-expression ['funn 1 2]))))))
+    (is (= #azql.emit.Sql["funn(?, ?)" [1 2]]
+           (sql (render-expression ['funn 1 2])))))
+
+  (testing "test generic functions and operators"
+    (are [a b] (= (apply ->Sql a) (sql (render-expression b)))
+         ["funfun()" nil] '(funfun)
+         ["funfun(?)" [1]] '(funfun 1)
+         ["my-fun(? + ?, ?, fun(), ffun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
+         ["myfun*(? <xx> ?)" [1 2]] '(myfun* (<xx> 1 2))
+         ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
+         ["(? || ? || ?)", ["a" "b" "c"]] '(|| "a" "b" "c")
+         ["(-x- (+x+ ?))" [1]] '(-x- (+x+ 1)))))
 
 (deftest test-prepare-macro-expr
   (testing "convert macro form to expr-tree"
