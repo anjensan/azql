@@ -128,7 +128,7 @@
 
  NONE "", COMMA ",",ASTERISK "*", QMARK "?", LP "(", RP ")",
  EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
- LESS_EQUAL "<=", GREATER_EQUAL ">=",
+ LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
 
 (defn parenthesis

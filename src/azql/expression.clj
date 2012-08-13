@@ -21,9 +21,8 @@
 (def const-false (raw "(0=1)"))
 
 (def default-expression-rendering-fns
-  {'and (fn [& r] (interpose AND r))
-   'or  (fn [& r] (interpose OR r))
-   '+ (fn [& r] (interpose PLUS r))
+  {'and (fn [x & r] (interpose AND (cons x r)))
+   'or  (fn [x & r] (interpose OR (cons x r)))
    '= (fn [a b]
         (cond
          (nil? a) [b IS_NULL]
@@ -34,8 +33,9 @@
           (nil? a) [b IS_NOT_NULL]
           (nil? b) [a IS_NOT_NULL]
           :else [a NOT_EQUALS b]))
-   '* (fn [& r] (interpose MULTIPLY r))
+   '+ (fn ([x] [UPLUS x]) ([x & r] (interpose PLUS (cons x r))))
    '- (fn ([x] [UMINUS x]) ([a & r] (interpose MINUS (cons a r))))
+   '* (fn [x & r] (interpose MULTIPLY (cons x r)))
    '/ (fn [x y] [x DIVIDE y])
    'not (fn [x] [NOT x])
    '< (fn [a b] [a LESS b])
