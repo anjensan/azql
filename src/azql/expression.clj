@@ -4,19 +4,6 @@
 (def expression-synonym
   {'not= '<>, '== '=})
 
-(defn- args-list-size
-  [c]
-  {:pre [(pos? c)]
-   :post [(>= % c)]}
-  (let [b (cond (< c 16) 4, (< c 64) 16 :else 32)]
-    (-> c (dec) (+ b) (quot b) (* b))))
-
-(defn- args-list
-  [v]
-  (let [s (args-list-size (count v))
-        a (map arg v)]
-      (comma-list (take s (cycle a)))))
-
 (def const-true (raw "(0=0)"))
 (def const-false (raw "(0=1)"))
 
@@ -47,11 +34,11 @@
    'not-in? (fn [a b]
               (if (empty? b)
                 const-true
-                [a NOT_IN (parenthesis (args-list b))]))
+                [a NOT_IN (parenthesis (comma-list b))]))
    'in? (fn [a b]
           (if (empty? b)
             const-false
-            [a IN (parenthesis (args-list b))]))
+            [a IN (parenthesis (comma-list b))]))
    'count (fn
             ([r] [COUNT (parenthesis r)])
             ([d r]
