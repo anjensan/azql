@@ -65,7 +65,7 @@
    ([relation alias table cond]
       `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
    ([relation table cond]
-      `(join-left ~relation ~table ~table ~cond)))
+      `(join* ~relation ~join-key ~table ~table ~(prepare-macro-expression cond))))
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
