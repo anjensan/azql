@@ -96,15 +96,20 @@
   [s c]
   `(where* ~s ~(prepare-macro-expression c)))
 
-(defn order
+(defn order*
   "Adds 'order by' section to query"
-  ([relation column] (order relation column nil))
+  ([relation column] (order* relation column nil))
   ([{order :order :as relation} column dir]
      (check-argument
       (contains? #{:asc :desc nil} dir)
       (str "Invalid sort direction " dir))
      (assoc relation
        :order (cons [column dir] order))))
+
+(defmacro order
+  "Adds 'order by' section to query"
+  ([relation column] `(order* ~relation ~(prepare-macro-expression column)))
+  ([relation column dir] `(order* ~relation ~(prepare-macro-expression column) ~dir)))
 
 (defn group
   "Adds 'group by' section to quiery"

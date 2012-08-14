@@ -115,6 +115,7 @@
          (select (from :A) (join-full :b :B (= :A.x :b.y))))))
 
 (deftest test-order-by
+
   (testing "test simple orderby"
     (are [s z] (= s (:sql (sql z)))
          "SELECT * FROM A AS a ORDER BY x"
@@ -124,7 +125,16 @@
          "SELECT * FROM A AS a ORDER BY x DESC"
          (select (from :a "A") (order :x :desc))
          "SELECT * FROM A AS a ORDER BY a.x, a.y ASC, a.z DESC"
-         (select (from :a "A") (order :a.z :desc) (order :a.y :asc) (order :a.x)))))
+         (select (from :a "A") (order :a.z :desc) (order :a.y :asc) (order :a.x))))
+
+  (testing "test order by expression"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM A ORDER BY (x + y)"
+         (select (from :A) (order (+ :x :y)))
+         "SELECT * FROM A ORDER BY cos(sin(x)) DESC"
+         (select (from :A) (order (cos (sin :x)) :desc))
+         "SELECT * FROM A ORDER BY fun(x) DESC, (y + ?) ASC, z DESC"
+         (select (from :A) (order :z :desc) (order (+ :y 1) :asc) (order (fun :x) :desc)))))
 
 (deftest test-limit-and-offset
   (testing "test offset"
