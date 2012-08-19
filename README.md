@@ -77,11 +77,12 @@ AZQL supports all types of joins:
 	  (join-inner :D (= :a.x :D.y))
 	  (join-full :e :TableE (and (= :e.x :a.x) (:e.y :D.y))))
 
+The only restriction is that first join must be 'implicit cross join' (function `from`).
 It is possible to use vendor-specific joins:
 
 	(select
 	  (from :a :TableOne)
-	  (join* 'COOL_JOIN :b :TableTwo (= :b.x = :a.y)))
+	  (join* (raw "COOL JOIN") :b :TableTwo (= :b.x = :a.y)))
 
 
 ### Ordering
@@ -113,28 +114,11 @@ You *must* specify aliases for all columns.
 
 ### Subqueries
 
-TODO
+Library supports subquieries:
 
-### Raw queries
-
-TODO
-
-
-## Table manipulation functions
-
-### Inserts
-
-TODO
-
-
-### Updates
-
-TODO
-
-
-### Deletes
-
-TODO
+	(def all-users (select (from :Users)))
+	(def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
+	(fetch-all all-active-users)
 
 
 ## License
