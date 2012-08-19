@@ -3,7 +3,7 @@
         [azql core emit]))
 
 (use-fixtures :once (fn [f] (binding [azql.emit/quote-name identity] (f))))
-              
+
 (deftest test-simple-queries
   (testing "simple selects from one table"
     (are [s z] (= s (:sql (sql z)))
@@ -160,3 +160,32 @@
          "SELECT a, b FROM T GROUP BY a, b HAVING ((a > ?) AND (? < b))"
          (select (from "T") (group [:a, :b]) (fields [:a :b])
                  (having (> :a 1)) (having (< 2 :b))))))
+
+(deftest test-subqueries
+  (testing "testing subqueries in joins"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM (SELECT * FROM A) AS a"
+         (select (from :a (select (from :A))))
+         "SELECT x FROM (SELECT x FROM A) AS a"
+         (select (from :a (select (fields [:x]) (from :A))) (fields [:x]))
+         "SELECT * FROM A, (SELECT * FROM B) AS b"
+         (select (from :A) (from :b (select (from :B))))
+         "SELECT * FROM (SELECT * FROM A) AS a INNER JOIN (SELECT * FROM B) AS b ON (x = y)"
+         (select
+          (from :a (select (from :A)))
+          (join :b (select (from :B)) (= :x :y)))))
+
+  (testing "test operators `exists`, `any`, `all`"
+    (are [s z] (= s (:sql (sql z)))
+         "SELECT * FROM A WHERE (EXISTS (SELECT * FROM B WHERE (x = y)))"
+         (select (from :A) (where (exists? (select (from :B) (where (= :x :y))))))
+         "SELECT * FROM A WHERE (NOT EXISTS (SELECT * FROM B WHERE (A.x = B.x)))"
+         (select (from :A) (where (not-exists? (select (from :B) (where (= :A.x :B.x))))))
+         "SELECT * FROM A WHERE (x IN (SELECT y FROM B))"
+         (select (from :A) (where (in? :x (select (from :B) (fields [:y])))))
+         "SELECT * FROM A WHERE (z < ANY (SELECT g FROM B))"
+         (select (from :A) (where (< :z (any (select (fields [:g]) (from :B))))))
+         "SELECT * FROM A WHERE (p > SOME (SELECT t FROM B))"
+         (select (from :A) (where (> :p (some :t (select (from :B))))))
+         "SELECT * FROM A WHERE (z <> ALL (SELECT t FROM X WHERE (x <> ?)))"
+         (select (from :A) (where (<> :z (all :t (select (from :X) (where (<> :x 1))))))))))

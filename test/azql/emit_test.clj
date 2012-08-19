@@ -31,7 +31,7 @@
     (is (= :A (qualifier "A.B")))))
 
 (deftest test-sql
-  
+
   (testing "default implementations of SqlLike"
     (are [s z] (= s (:sql (as-sql z)))
          "\"keyword\"" :keyword

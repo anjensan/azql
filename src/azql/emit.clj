@@ -121,7 +121,8 @@
  IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
  COUNT, MIN, MAX, AVG, SUM, INSERT, DELETE, VALUES, INTO, UPDATE,
  LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
- CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET)
+ CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
+ EXISTS, NOT_EXISTS, ALL, ANY, SOME)
 
 (do-template
  [kname value] (def kname (raw value))
@@ -145,3 +146,8 @@
   "Returns values separated by comma."
   [values]
   (interpose COMMA (map remove-parenthesis values)))
+
+(defn as-alias
+  "Interprets value as column/table alias"
+  [n]
+  (keyword (name n)))

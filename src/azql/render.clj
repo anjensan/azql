@@ -35,6 +35,7 @@
 
 (defn render-from
   [{:keys [tables joins]}]
+  (check-argument (not (empty? joins)) "No tables specified")
   [FROM
    (let [[a jn] (first joins)
          t (tables a)]

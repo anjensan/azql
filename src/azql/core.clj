@@ -38,11 +38,6 @@
   [& body]
   (emit-threaded-expression select* body))
 
-(defn- as-alias
-  "Interprets value as column/table alias"
-  [n]
-  (keyword (name n)))
-
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as relation} type alias table cond]
