@@ -65,9 +65,9 @@
  join-right :right, join-left :left, join-full :full)
 
 (defn fields*
-  "Add fieldlist to query"
+  "Adds field list to query."
   [s fd]
-  (check-argument (nil? (:fields s)) "Relation already has specified fields")
+  (check-argument (nil? (:fields s)) "Relation already has specified fields.")
   (assoc s :fields fd))
 
 (defn- prepare-fields
@@ -77,7 +77,7 @@
     (into {} (map (juxt as-alias prepare-macro-expression) fs))))
 
 (defmacro fields
-  "Adds fieldlist to query, support macro expressions."
+  "Adds field list to query, support macro expressions."
   [s fd]
   `(fields* ~s ~(prepare-fields fd)))
 
@@ -87,12 +87,12 @@
   (assoc s :where (conj-expression w c)))
 
 (defmacro where
-  "Adds 'where' condition to query, support macro expressions"
+  "Adds 'where' condition to query, support macro expressions."
   [s c]
   `(where* ~s ~(prepare-macro-expression c)))
 
 (defn order*
-  "Adds 'order by' section to query"
+  "Adds 'order by' section to query."
   ([relation column] (order* relation column nil))
   ([{order :order :as relation} column dir]
      (check-argument
@@ -102,12 +102,12 @@
        :order (cons [column dir] order))))
 
 (defmacro order
-  "Adds 'order by' section to query"
+  "Adds 'order by' section to query."
   ([relation column] `(order* ~relation ~(prepare-macro-expression column)))
   ([relation column dir] `(order* ~relation ~(prepare-macro-expression column) ~dir)))
 
 (defn group
-  "Adds 'group by' section to quiery"
+  "Adds 'group by' section to query."
   [{g :group :as relation} fields]
   (check-state (nil? g) (str "Relation already has grouping " g))
   (let [f (if (sequential? fields) fields [fields])]
@@ -115,31 +115,32 @@
       :group f)))
 
 (defn modifier
+  "Attaches a modifier to the query. Modifier should be keyword or raw sql."
   [{cm :modifier :as relation} m]
   (check-state (nil? cm) (str "Relation already has modifier " cm))
   (assoc relation :modifier m))
 
 (defn limit
-  "Limit number of rows"
+  "Limits number of rows."
   [{ov :limit :as relation} v]
   (check-argument (integer? v) "Limit must be integer")
   (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
-  "Adds an offset to relation"
+  "Adds an offset to query."
   [{ov :offset :as relation} v]
   (check-argument (integer? v) "Offset must be integer")
   (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 
 (defn having*
-  "Adds 'having' condition to query"
+  "Adds 'having' condition to query."
   [{h :having :as s} c]
   (assoc s :having (conj-expression h c)))
 
 (defmacro having
-  "Adds 'having' condition to query, support macro expressions"
+  "Adds 'having' condition to query, supports macro expressions"
   [s c]
   `(having* ~s ~(prepare-macro-expression c)))
 
@@ -157,7 +158,7 @@
      (jdbc/with-query-results ~v sp# ~@body)))
 
 (defn fetch-all
-  "Executes query and return results as vector"
+  "Executes query and returns results as a vector."
   [relation]
   (jdbc/with-query-results* (to-sql-params relation) vec))
 
@@ -176,13 +177,13 @@
       (val (first x)))))
 
 (defn fetch-one
-  "Executes query and return first element or throws exceptions
-   if resultset contains more than one record"
+  "Executes query and returns first element or throws an exception
+   if resultset contains more than one record."
   [relation]
   (jdbc/with-query-results* (to-sql-params relation) one-result))
 
 (defn fetch-single
-  "Executes quiery and return single result value. Useful for aggregate functions"
+  "Executes quiery and return single result value. Useful for aggregate functions."
   [relation]
   (jdbc/with-query-results* (to-sql-params relation) single-result))
 
@@ -224,62 +225,62 @@
     arguments))
 
 (defn execute-batch!
-  "Execute batch statement."
+  "Executes batch statement."
   [query]
   (let [{s :sql a :args} (sql query)]
     (apply jdbc/do-prepared s (prepare-batch-arguments a))))
 
 (defn values
-  "Add records to insert statement."
+  "Adds records to insert statement."
   [insert records]
   (let [records (if (map? records) [records] (seq records))]
     (assoc insert
       :records (into (:records insert) records))))
 
 (defn delete*
-  "Create new delete statement."
+  "Creates new delete statement."
   ([] (->Delete nil nil nil))
   ([table] (from (delete*) table))
   ([alias table] (from (delete*) alias table)))
 
 (defn insert*
-  "Create new insert statement."
+  "Creates new insert statement."
   ([table] (->Insert table nil []))
   ([table records] (values (insert* table) records)))
 
 (defn update*
-  "Create new update statement"
+  "Creates new update statement"
   ([table] (update* table table))
   ([alias table] (->Update [alias table] nil nil)))
 
 (defn setf
-  "Add field to update statement"
+  "Adds field to update statement"
   [query fname value]
   (assoc query :fields (assoc (:fields query) fname value)))
 
 (defmacro delete!
-  "Delete records from a table."
+  "Deletes records from a table."
   [& body]
   `(execute!
     ~(emit-threaded-expression delete* body)))
 
 (defn execute-insert!
-  "Execute insert quiery.
-   If a single record is inserted, return map of the generated keys."
+  "Executes insert query.
+   If a single record is inserted, returns map of the generated keys."
   [{r :records :as query}]
   (if (= 1 (count r))
     (execute-return-keys! query)
     (execute-batch! query)))
 
 (defmacro insert!
-  "Insert new record into a table.
-   If a single record is inserted, return map of the generated keys."
+  "Inserts new record into the table.
+   If a single record is inserted, returns map of the generated keys."
   [& body]
   `(execute-insert!
     ~(emit-threaded-expression insert* body)))
 
 (defmacro update!
-  "Executes update statement"
+  "Executes update statement."
   [& body]
   `(execute!
     ~(emit-threaded-expression update* body)))

@@ -26,8 +26,8 @@ AZQL syntax is quite similar to SQL:
 
 	(select
 	  (fields [:id :name :email])
-	  (from :Users)
-	  (where (= :role "ADMIN"))
+	  (from :a :Users)
+	  (where (= :a.role "ADMIN"))
 	  (fetch-all))
 
 After macroexpansions:
@@ -35,8 +35,8 @@ After macroexpansions:
 	(->
 	  (select*)
 	  (fields* {:id :id, :name :name, :email :email})
-	  (join* nil :Users :Users) ; nil means 'implicit cross join'
-	  (where* ['= :role "ADMIN"])
+	  (join* nil :a :Users) ; nil means 'implicit cross join'
+	  (where* ['= :a.role "ADMIN"])
 	  (fetch-all))
 
 Actual work is doing in `fetch-all` - this function executes query
@@ -45,12 +45,11 @@ and converts `resultset-seq` into vector.
 Library provides some alternatives:
 - `fetch-one` feches only one record, raises exception if more than one recerd is returened.
 - `fetch-single` fetches only single value (one row and one column), useful for aggregate queries
-- `with-fetch` executes arbitary code with open `resultset-seq`
+- `with-fetch` executes arbitary code with opened `resultset-seq`
 
 Example:
 
 	(with-fetch [f (select (from :Users))]
-	  ; f it seq of rows
 	  (reduce + (map :rating f)))
 
 It is possible to compose additional where's:
@@ -75,7 +74,7 @@ AZQL supports all types of joins:
 	  (join :b :B (= :a.x :b.y))        ; inner join
 	  (join-cross :c :B)                ; explicit cross join
 	  (join-inner :D (= :a.x :D.y))
-	  (join-full :e :TableE (and (= :e.x :a.x) (:e.y :D.y))))
+	  (join-full :e :E (and (= :e.x :a.x) (:e.y :D.y))))
 
 The only restriction is that first join must be 'implicit cross join' (function `from`).
 It is possible to use vendor-specific joins:
@@ -119,6 +118,32 @@ Library supports subquieries:
 	(def all-users (select (from :Users)))
 	(def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
 	(fetch-all all-active-users)
+
+
+### CRUD
+
+Library supports all CRUD operations.
+Intert new records:
+
+	(insert! :table
+	  (values [{:field1 1, :field2 "value"}, {:field1 2, :field2 "value"}]))
+
+Columns can be explicitly specified:
+
+	(insert! :table
+	  (fields [:a :b])
+	  (values [{:a 1, :b 2}, {:a 3, :b 4}]))
+
+Update:
+
+	(update! :table
+	  (setf :cnt (+ :cnt 1))
+	  (setf :vale "new-value")
+	  (where (in? :id [1 2 3])))
+
+Delete:
+
+	(delete! :table (where (= :id 1)))
 
 
 ## License
