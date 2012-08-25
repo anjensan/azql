@@ -1,5 +1,5 @@
 (ns azql.core
-  (:use [azql util expression emit render])
+  (:use [azql util expression emit render connection])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
@@ -155,12 +155,14 @@
   (assert (vector? vr))
   (assert (= 2 (count vr)))
   `(let [sp# (#'to-sql-params ~relation)]
-     (jdbc/with-query-results ~v sp# ~@body)))
+     (with-global-connection
+       (jdbc/with-query-results ~v sp# ~@body))))
 
 (defn fetch-all
   "Executes query and returns results as a vector."
   [relation]
-  (jdbc/with-query-results* (to-sql-params relation) vec))
+  (with-global-connection
+    (jdbc/with-query-results* (to-sql-params relation) vec)))
 
 (defn- one-result
   "Extracts one record from resultset."
@@ -180,12 +182,14 @@
   "Executes query and returns first element or throws an exception
    if resultset contains more than one record."
   [relation]
-  (jdbc/with-query-results* (to-sql-params relation) one-result))
+  (with-global-connection
+    (jdbc/with-query-results* (to-sql-params relation) one-result)))
 
 (defn fetch-single
   "Executes quiery and return single result value. Useful for aggregate functions."
   [relation]
-  (jdbc/with-query-results* (to-sql-params relation) single-result))
+  (with-global-connection
+    (jdbc/with-query-results* (to-sql-params relation) single-result)))
 
 ;; updates
 
@@ -194,7 +198,8 @@
   [query]
   (let [{s :sql a :args} (sql query)]
     (first
-     (jdbc/do-prepared s a))))
+     (with-global-connection
+       (jdbc/do-prepared s a)))))
 
 (defn- batch-arg?
   [v]
@@ -207,7 +212,8 @@
     (check-argument
      (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
      "Can't return generated keys for batch query.")
-    (jdbc/do-prepared-return-keys s (map #(if (batch-arg? %) (first %) %) a))))
+    (with-global-connection
+      (jdbc/do-prepared-return-keys s (map #(if (batch-arg? %) (first %) %) a)))))
 
 (defn- prepare-batch-arguments
   [arguments]
@@ -228,7 +234,8 @@
   "Executes batch statement."
   [query]
   (let [{s :sql a :args} (sql query)]
-    (apply jdbc/do-prepared s (prepare-batch-arguments a))))
+    (with-global-connection
+      (apply jdbc/do-prepared s (prepare-batch-arguments a)))))
 
 (defn values
   "Adds records to insert statement."
