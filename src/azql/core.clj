@@ -28,16 +28,20 @@
   (as-sql [this]
     (sql (render-update this))))
 
+(declare fields)
+(declare fields*)
+
 (defn select*
   "Creates empty select."
-  []
-  #azql.core.Select{})
+  ([] #azql.core.Select{})
+  ([fields]
+     (-> (select*) (fields* fields))))
 
 (defmacro select
   "Creates new select."
-  [& body]
-  (emit-threaded-expression select* body))
-
+  [a & body]
+  (emit-threaded-expression select*
+                            (list* (if (list? a) a `(fields ~a)) body)))
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as relation} type alias table cond]

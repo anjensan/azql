@@ -21,7 +21,9 @@
          (select (from :a "Table1")
                  (fields* (array-map :x :a, :Y :a.b, :c :c)))
          "SELECT *, a, b FROM X"
-         (select (from :X) (fields [:* :a :b]))))
+         (select (from :X) (fields [:* :a :b]))
+         "SELECT a, b FROM A"
+         (select [:a :b] (from :A))))
 
   (testing "select from 2 tables, full join"
     (are [s z] (= s (:sql (sql z)))

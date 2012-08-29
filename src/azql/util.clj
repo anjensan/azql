@@ -7,11 +7,17 @@
   [f m]
   (into (if (map? m) (empty m) {}) (for [[k v] m] [k (f v)])))
 
+(defn code-form?
+  [f]
+  (or
+   (instance? clojure.lang.Cons f)
+   (list? f)))
+
 (defn emit-threaded-expression
   "Executes 'sfun' with first constant values from 'body' as arguments
    and threads result through the rest of 'body' with '->'"
   [sfun body]
-  (let [[s b] (split-with (complement list?) body)]
+  (let [[s b] (split-with (complement code-form?) body)]
     `(-> (~sfun ~@s) ~@b)))
 
 (defn eager-filtered-flatten
