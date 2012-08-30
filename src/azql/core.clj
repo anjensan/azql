@@ -122,6 +122,8 @@
   "Attaches a modifier to the query. Modifier should be keyword or raw sql."
   [{cm :modifier :as relation} m]
   (check-state (nil? cm) (str "Relation already has modifier " cm))
+  (check-argument (or (sql? m) (#{:distinct :all} m))
+                  "Invalid modifier, expected :distinct, :all or raw sql.")
   (assoc relation :modifier m))
 
 (defn limit

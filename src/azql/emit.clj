@@ -150,4 +150,6 @@
 (defn as-alias
   "Interprets value as column/table alias"
   [n]
+  (check-argument (or (keyword? n) (string? n))
+                  "Invalid alias, extected keyword or string.")
   (keyword (name n)))
