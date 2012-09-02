@@ -20,6 +20,20 @@
   ([a] (parenthesis a))
   ([a & r] (parenthesis (cons a r))))
 
+(def ^String like-pattern-escaping-char "\\")
+
+(def like-pattern-escaping-sql
+  (raw (str \' like-pattern-escaping-char \')))
+
+(defn escape-like-pattern
+  "Escapes all '%' and '_' characters with '\\'."
+  [^String a]
+  (.. a
+      (replace like-pattern-escaping-char
+               (str like-pattern-escaping-char like-pattern-escaping-char))
+      (replace "%" (str like-pattern-escaping-char "%"))
+      (replace "_" (str like-pattern-escaping-char "_"))))
+
 (def default-expression-rendering-fns
   {'raw (fn [s] (raw s))
    'and (fn [x & r] (par (interpose AND (cons x r))))
@@ -85,6 +99,12 @@
    'all (fn
             ([q] [ALL (par q)])
             ([f q] [ALL (par (attach-field f q))]))
+   'like? (fn [a b]
+            [a LIKE b ESCAPE like-pattern-escaping-sql])
+   'begins? (fn [a b]
+                  (check-argument (string? b) "Pattern should be string.")
+                  [a LIKE (str (escape-like-pattern b) "%")
+                   ESCAPE like-pattern-escaping-sql])
    })
 
 (defn render-generic-operator

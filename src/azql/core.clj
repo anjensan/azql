@@ -297,3 +297,8 @@
   [& body]
   `(execute!
     ~(emit-threaded-expression update* body)))
+
+(defn escape-like
+  "Escapes 'LIKE' pattern. Replaces all '%' with '\\%' and '_' with '\\_'."
+  [^String pattern]
+  (azql.expression/escape-like-pattern pattern))

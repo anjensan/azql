@@ -74,11 +74,11 @@
 ;; tests
 
 (deftest test-simple-selects
-  
+
   (testing "select all entities from table (test count)"
     (are [c tbl] (= c (count (select (from tbl) (fetch-all))))
          3 :users, 4 :posts, 9 :comments))
-  
+
   (testing "select all entities (order by name)"
     (is (=
          [{:id 2 :name "Anton"}, {:id 3 :name "Arturas"}, {:id 1 :name "Artyom"}]
@@ -98,20 +98,32 @@
     (is (=
          {:id 2 :n "Anton"}
          (select (from :users) (fields {:id :id :n :name}) (where (= :id 2)) (fetch-one)))))
-  
+
   (testing "get user name by id"
     (is (=
          {:name "Arturas"}
          (select (fields [:name]) (from :users) (where (= :id 3)) (fetch-one)))))
-  
+
   (testing "get only user name"
     (is (=
          "Arturas"
          (select (from :users) (where (= :id 3)) (fields [:name]) (fetch-single)))))
-  
+
   (testing "get posts without parent"
     (is (= 5 (select (from :comments) (where (= :parentid nil)) (fetch-all) (count))))))
-           
+
+(deftest test-like-operator
+  (testing "test like operator"
+    (is (=
+         "Arturas"
+         (select [:name] (from :users) (where (like? :name "%turas")) (fetch-single))))
+    (is (=
+         "Arturas"
+         (select [:name] (from :users) (where (begins? :name "Artur")) (fetch-single))))
+    (is
+     (nil?
+      (select (from :users) (where (begins? :name "Artur%")) (fetch-one))))))
+
 (deftest test-multi-value-expressions
   (testing "test 'in' operator"
     (are [cnt s]
@@ -156,7 +168,7 @@
     (is (select (from :users) (where (= :name "New User")) (fetch-one)))
     (delete! (from :users) (where (= :name "New User")))
     (is (not (select (from :users) (where (= :name "New User")) (fetch-one)))))
-  
+
   (testing "insert multiple records"
     (insert! :posts (values {:text "New Post 1"}) (values {:text "New Post 2" :userid 1}))
     (is (= 1 (select (from :posts) (fields [:userid]) (where (= :text "New Post 2")) (fetch-single))))
@@ -164,11 +176,11 @@
     (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))
 
 (deftest test-update
-  
+
   (testing "update one record"
     (update! :users (setf :name "XXX") (where (= :name "Anton")))
     (is (= 1 (select (from :users) (where (= :name "XXX")) (fetch-all) (count)))))
-  
+
   (testing "update all records"
     (update! :users (setf :name "XXX"))
     (is (= 3 (select (from :users) (where (= :name "XXX")) (fetch-all) (count))))))
