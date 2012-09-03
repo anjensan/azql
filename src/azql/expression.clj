@@ -11,9 +11,9 @@
 (def const-false (raw "(0=1)"))
 
 (defn- attach-field
-  "Add fieldlist to query"
+  "Add fieldlist to query."
   [f q]
-  (check-argument (nil? (:fields q)) "Relation already has fields")
+  (check-argument (nil? (:fields q)) "Relation already has fields.")
   (assoc q :fields {(as-alias f) f}))
 
 (defn- par
@@ -122,7 +122,7 @@
      (comma-list r)
      (raw ")")]))
 
-(defn operator?
+(defn- operator?
   [f]
   (let [fch (char (get (name f) 0))]
     (not (Character/isLetterOrDigit fch))))
