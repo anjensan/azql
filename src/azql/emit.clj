@@ -1,5 +1,5 @@
 (ns azql.emit
-  (:use azql.util)
+  (:use [azql util dialect])
   (:require [clojure.string :as s])
   (:use clojure.template))
 
@@ -44,7 +44,7 @@
       (when (> (count n) 1)
         (first n)))))
 
-(defn ^:dynamic quote-name
+(defn-dialect quote-name
   "Quote name."
   [s]
   (str \" s \"))

@@ -8,7 +8,7 @@ Main goals of this project:
 - DSL should be closer to native SQL as much as possible
 - no fake optimizations (modern DBs are clever enough)
 - protection from injections, but not from invalid queries
-- sometimes we want to include vendor-specefic parts into queries
+- sometimes we want to include vendor-specific parts into queries
 
 
 ## Installation

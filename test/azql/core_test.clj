@@ -1,8 +1,10 @@
 (ns azql.core-test
   (:use clojure.test
-        [azql core emit]))
+        [azql core emit dialect]))
 
-(use-fixtures :once (fn [f] (binding [azql.emit/quote-name identity] (f))))
+;; custom dialect without quoting
+(defmethod azql.emit/quote-name ::noquote-dialect [x] x)
+(use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::noquote-dialect] (f))))
 
 (deftest test-simple-queries
   (testing "simple selects from one table"
