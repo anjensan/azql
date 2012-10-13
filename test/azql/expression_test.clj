@@ -1,5 +1,5 @@
 (ns azql.expression-test
-  (:use [azql expression emit])
+  (:use [azql expression emit dialect])
   (:use clojure.test))
 
 (deftest test-render-expression
@@ -63,3 +63,10 @@
   (testing "test 'begins?' alias"
     (is
      (= ["x" "abc%"] (:args (sql (render-expression ['begins? "x" "abc"])))))))
+
+(deftest test-dialects-specific-op
+  (testing "dialect-specific operation"
+     (def-op myfun [] :myfun-default)
+     (defmethod op-myfun ::dialect [] :myfun-dialect)
+     (is (= :myfun-default (render-fn 'myfun)))
+     (is (= :myfun-dialect (binding [*dialect* ::dialect] (render-fn 'myfun))))))

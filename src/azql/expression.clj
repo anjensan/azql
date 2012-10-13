@@ -99,9 +99,9 @@
 
 ;; rendering
 
-; TODO: dispatch on dialect
-
-(defmulti render-fn (fn [f & _] f))
+(defmulti render-fn
+  "Renders one function. First argument is a function symbol. Rest is args."
+  (fn [f & _] f))
 
 (defmethod render-fn :default
   [s & r]
@@ -109,140 +109,151 @@
     (apply render-generic-operator s r)
     (apply render-generic-function s r)))
 
-(defmethod render-fn 'raw
-  [_ s]
+(defmacro def-op
+  "Defines new operator.
+   Each operator has own multimethod to dispatch by dialects."
+  [s & args-and-body]
+  (let [fn-name (symbol (or (:fn-name (meta s)) (str "op-" (name s))))]
+    `(do
+       (defn-dialect ~fn-name ~@args-and-body)
+       (defmethod render-fn (quote ~s) [_# & args#] (apply ~fn-name args#)))))
+
+(def-op raw
+  [s]
   (raw s))
 
-(defmethod render-fn 'and
-  [_ x & r]
+(def-op and
+  [x & r]
   (par (interpose AND (cons x r))))
 
-(defmethod render-fn 'or
-  [_ x & r]
+(def-op or
+  [x & r]
   (par (interpose OR (cons x r))))
 
-(defmethod render-fn '=
-  [_ a b]
+(def-op =
+  [a b]
   (par
    (cond
     (nil? a) [b IS_NULL]
     (nil? b) [a IS_NULL]
     :else [a EQUALS b])))
 
-(defmethod render-fn '<>
-  [_ a b]
+(def-op <>
+  [a b]
   (par
    (cond
     (nil? a) [b IS_NOT_NULL]
     (nil? b) [a IS_NOT_NULL]
     :else [a NOT_EQUALS b])))
 
-(defmethod render-fn '+
-  ([_ x] (par [UPLUS x]))
-  ([_ x & r] (par (interpose PLUS (cons x r)))))
+(def-op +
+  ([x] (par [UPLUS x]))
+  ([x & r] (par (interpose PLUS (cons x r)))))
 
-(defmethod render-fn '-
-  ([_ x] (par [UMINUS x]))
-  ([_ a & r] (par (interpose MINUS (cons a r)))))
+(def-op -
+  ([x] (par [UMINUS x]))
+  ([a & r] (par (interpose MINUS (cons a r)))))
 
-(defmethod render-fn '*
-  [_ x & r] (par (interpose MULTIPLY (cons x r))))
+(def-op *
+  [x & r] (par (interpose MULTIPLY (cons x r))))
 
-(defmethod render-fn '/
-  [_ x y] (par [x DIVIDE y]))
+; symbol "op-/" is invalid, use "op-div" instead.
+(def-op ^{:fn-name "op-div"} /
+  [x y]
+  (par [x DIVIDE y]))
 
-(defmethod render-fn 'not
-  [_ x]
+(def-op not
+  [x]
   (par NOT x))
 
-(defmethod render-fn '<
-  [_ a b]
+(def-op <
+  [a b]
   (par a LESS b))
 
-(defmethod render-fn '>
-  [_ a b]
+(def-op >
+  [a b]
   (par a GREATER b))
 
-(defmethod render-fn '<=
-  [_ a b]
+(def-op <=
+  [a b]
   (par a LESS_EQUAL b))
 
-(defmethod render-fn '>=
-  [_ a b]
+(def-op >=
+  [a b]
   (par a GREATER_EQUAL b))
 
-(defmethod render-fn 'nil?
-  [_ x]
+(def-op nil?
+  [x]
   (par x IS_NULL))
 
-(defmethod render-fn 'not-nil?
-  [_ x]
+(def-op not-nil?
+  [x]
   (par x IS_NOT_NULL))
 
-(defmethod render-fn 'not-in?
-  [_ a b]
+(def-op not-in?
+  [a b]
   (cond
    (empty? b) (render-true)
    (map? b) (par a NOT_IN (parenthesis b))
    :else (par a NOT_IN (parenthesis (comma-list b)))))
 
-(defmethod render-fn 'in?
-  [_ a b]
+(def-op in?
+  [a b]
   (cond
    (empty? b) (render-false)
    (map? b) (par a IN (parenthesis b))
    :else (par a IN (parenthesis (comma-list b)))))
 
-(defmethod render-fn 'count
-  ([_ r] [COUNT (parenthesis r)])
-  ([_ d r]
+(def-op count
+  ([r] [COUNT (parenthesis r)])
+  ([d r]
      (case d
        :distinct [COUNT (par DISTINCT r)]
        nil [COUNT (par r)]
        (illegal-argument "Unknown modifier " d))))
 
-(defmethod render-fn 'max
-  [_ x]
+(def-op max
+  [x]
   [MAX (par x)])
 
-(defmethod render-fn 'min
-  [_ x]
+(def-op min
+  [x]
   [MIN (par x)])
 
-(defmethod render-fn 'avg
-  [_ x]
+(def-op avg
+  [x]
   [AVG (par x)])
 
-(defmethod render-fn 'sum
-  [_ x]
+(def-op sum
+  [x]
   [SUM (par x)])
 
-(defmethod render-fn 'exists?
-  [_ q]
+(def-op exists?
+  [q]
   (par EXISTS (par q)))
 
-(defmethod render-fn 'not-exists?
-  [_ q]
+(def-op not-exists?
+  [q]
   (par NOT_EXISTS (par q)))
 
-(defmethod render-fn 'some
-  ([_ q] [SOME (par q)])
-  ([_ f q] [SOME (par (attach-field f q))]))
+(def-op some
+  ([q] [SOME (par q)])
+  ([f q] [SOME (par (attach-field f q))]))
 
-(defmethod render-fn 'any
-  ([_ q] [ANY (par q)])
-  ([_ f q] [ANY (par (attach-field f q))]))
+(def-op any
+  ([q] [ANY (par q)])
+  ([f q] [ANY (par (attach-field f q))]))
 
-(defmethod render-fn 'all
-  ([_ q] [ALL (par q)])
-  ([_ f q] [ALL (par (attach-field f q))]))
+(def-op all
+  ([q] [ALL (par q)])
+  ([f q] [ALL (par (attach-field f q))]))
 
-(defmethod render-fn 'like?
-  [_ a b]
+(def-op like?
+  [a b]
   [a LIKE b ESCAPE (like-pattern-escaping-sql)])
 
-(defmethod render-fn 'begins?
-  [_ a b]
+(def-op begins?
+  [a b]
   (check-argument (string? b) "Pattern should be string.")
   [a LIKE (str (escape-like-pattern b) "%")
    ESCAPE (like-pattern-escaping-sql)])
