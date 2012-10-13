@@ -1,14 +1,15 @@
 (ns azql.expression
-  (:use [azql util emit]))
+  (:use [azql util emit dialect]))
 
-(def expression-synonym
-  {'not= '<>, '== '=})
+(defn-dialect expression-synonym
+  [s]
+  (get {'not= '<>, '== '=} s s))
 
 (def subquery-operators
   '#{some any all exists? not-exists? in? not-in? raw})
 
-(def const-true (raw "(0=0)"))
-(def const-false (raw "(0=1)"))
+(defn-dialect render-true [] (raw "(0=0)"))
+(defn-dialect render-false [] (raw "(0=1)"))
 
 (defn- attach-field
   "Add fieldlist to query."
@@ -22,10 +23,11 @@
 
 (def ^String like-pattern-escaping-char "\\")
 
-(def like-pattern-escaping-sql
+(defn-dialect like-pattern-escaping-sql
+  []
   (raw (str \' like-pattern-escaping-char \')))
 
-(defn escape-like-pattern
+(defn-dialect escape-like-pattern
   "Escapes all '%' and '_' characters with '\\'."
   [^String a]
   (.. a
@@ -34,39 +36,31 @@
       (replace "%" (str like-pattern-escaping-char "%"))
       (replace "_" (str like-pattern-escaping-char "_"))))
 
-(defmulti render-fn (fn [f & _] f))
-
 (defn- operator?
   [f]
   (let [fch (char (get (name f) 0))]
     (not (Character/isLetterOrDigit fch))))
 
-(defn render-generic-operator
-  "Render generic infix operator"
+(defn-dialect render-generic-operator
+  "Render generic infix operator."
   ([f x] (parenthesis [(raw (name f)) x]))
   ([f x & r]
      (parenthesis
       (interpose (raw (name f)) (cons x r)))))
 
-(defn render-generic-function
-  "Render generic function"
- ([f] (raw (str (name f) "()")))
- ([f & r]
+(defn-dialect render-generic-function
+  "Renders generic function."
+  ([f] (raw (str (name f) "()")))
+  ([f & r]
     [(raw (str (name f) "("))
      (comma-list r)
      (raw ")")]))
-
-(defmethod render-fn :default
-  [s & r]
-  (if (operator? s)
-    (apply render-generic-operator s r)
-    (apply render-generic-function s r)))
 
 (defn- canonize-operator-symbol
   [s]
   (when-not (symbol? s)
     (illegal-argument "Illegal function name '" s "', extected symbol"))
-  (expression-synonym s s))
+  (expression-synonym s))
 
 (defn prepare-macro-expression
   "Walk tree and replace synonyms.
@@ -85,13 +79,16 @@
     e))
 
 (defn conj-expression
+  "Concatenates two logical expressions with 'AND'."
   [expr e]
   (cond
    (not (seq expr)) e
    (= 'and (first expr)) (conj (vec expr) e)
    :else (list 'and expr e)))
 
-(defn render-expression
+(declare render-fn)
+
+(defn-dialect render-expression
   "Convert expression tree (recursively) to sql'like object."
   [etree]
   (if (and (sequential? etree) (symbol? (first etree)))
@@ -100,8 +97,17 @@
       (apply render-fn f rs))
     etree))
 
+;; rendering
 
-;; operators
+; TODO: dispatch on dialect
+
+(defmulti render-fn (fn [f & _] f))
+
+(defmethod render-fn :default
+  [s & r]
+  (if (operator? s)
+    (apply render-generic-operator s r)
+    (apply render-generic-function s r)))
 
 (defmethod render-fn 'raw
   [_ s]
@@ -176,14 +182,14 @@
 (defmethod render-fn 'not-in?
   [_ a b]
   (cond
-   (empty? b) const-true
+   (empty? b) (render-true)
    (map? b) (par a NOT_IN (parenthesis b))
    :else (par a NOT_IN (parenthesis (comma-list b)))))
 
 (defmethod render-fn 'in?
   [_ a b]
   (cond
-   (empty? b) const-false
+   (empty? b) (render-false)
    (map? b) (par a IN (parenthesis b))
    :else (par a IN (parenthesis (comma-list b)))))
 
@@ -233,10 +239,10 @@
 
 (defmethod render-fn 'like?
   [_ a b]
-  [a LIKE b ESCAPE like-pattern-escaping-sql])
+  [a LIKE b ESCAPE (like-pattern-escaping-sql)])
 
 (defmethod render-fn 'begins?
   [_ a b]
   (check-argument (string? b) "Pattern should be string.")
   [a LIKE (str (escape-like-pattern b) "%")
-   ESCAPE like-pattern-escaping-sql])
+   ESCAPE (like-pattern-escaping-sql)])

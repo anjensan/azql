@@ -4,19 +4,19 @@
   (:use clojure.template))
 
 (defprotocol SqlLike
-  (as-sql [this] "Converts object to 'Sql'"))
+  (as-sql [this] "Converts object to 'Sql'."))
 
 (defrecord Sql [sql args]
   SqlLike
   (as-sql [this] this))
 
 (defn sql?
-  "Check if expression is rendered (raw) SQL"
+  "Checks if expression is rendered (raw) SQL."
   [s]
   (instance? Sql s))
 
 (defn raw
-  "Constructs new raw SQL (without parameters)"
+  "Constructs new raw SQL (without parameters)."
   ([text] (Sql. (str text) nil)))
 
 (defn arg
@@ -30,14 +30,14 @@
   (Sql. "?" [(with-meta values {:batch true})]))
 
 (defn parse-qname
-  "Split qualified name and return first part. Ex :a.val => [:a :val]"
+  "Splits qualified name and return first part. Ex :a.val => [:a :val]."
   [qname]
   (let [n (name qname)
         rp (s/split n #"\.")]
     (mapv keyword rp)))
 
 (defn qualifier
-  "Return first part of qualified name. Ex: :a.val => :a, :x => nil"
+  "Returns first part of qualified name. Ex: :a.val => :a, :x => nil."
   [qname]
   (when qname
     (let [n (parse-qname qname)]
@@ -45,7 +45,7 @@
         (first n)))))
 
 (defn-dialect quote-name
-  "Quote name."
+  "Quotes name."
   [s]
   (str \" s \"))
 
@@ -57,7 +57,7 @@
       (quote-name n))))
 
 (defn emit-qname
-  "Parse qualified name and return SQL. Ex :a.val => \"a\".\"val\""
+  "Parses qualified name and return SQL. Ex :a.val => \"a\".\"val\"."
   [qname]
   (let [r (parse-qname qname)]
     (s/join \. (map emit-quoted-qname-part r))))
@@ -139,7 +139,7 @@
   ^{::orig e} [LP e RP])
 
 (defn remove-parenthesis
-  "Remove parenthesis"
+  "Removes parenthesis."
   [e]
   (or (::orig (meta e)) e))
 

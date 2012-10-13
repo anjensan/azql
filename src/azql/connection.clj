@@ -2,7 +2,8 @@
   (:use [azql util dialect])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def ^:dynamic ^{:doc "Global connection."} ^java.sql.Connection global-connection nil)
+(def ^:dynamic ^{:doc "Global connection."}
+  ^java.sql.Connection global-connection nil)
 
 (defn with-global-connection*
   "Executes function in a scope of the global connection."
@@ -10,7 +11,6 @@
   (if (jdbc/find-connection)
     (with-recognized-dialect* f)
     (if-let [c global-connection]
-      ; reuse opened connection
       (with-bindings*
         ; copied from `clojure.java.jdbc/with-connection`
         {#'jdbc/*db*

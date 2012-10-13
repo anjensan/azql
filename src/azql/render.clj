@@ -68,12 +68,14 @@
   [{m :modifier}]
   (get {:distinct DISTINCT :all ALL nil NONE} m m))
 
-(def max-limit-value Integer/MAX_VALUE)
+(defn-dialect max-limit-value
+  []
+  Integer/MAX_VALUE)
 
 (defn-dialect render-limit
   [{:keys [limit offset]}]
   (if (or limit offset)
-    (let [lim (arg (if limit (int limit) max-limit-value))]
+    (let [lim (arg (if limit (int limit) (max-limit-value)))]
       [LIMIT lim
        (if offset [OFFSET (arg (int offset))] NONE)])
     NONE))
@@ -112,7 +114,7 @@
   [{t :table}]
   [INTO (qname t)])
 
-(defn-dialect collect-fields
+(defn collect-fields
   [records]
   (reduce cset/union (map (comp set keys) records)))
 

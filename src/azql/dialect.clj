@@ -53,12 +53,12 @@
        (defmethod ~name :default ~@body))))
 
 (defmacro with-recognized-dialect
-  "Recognizes dialect of current connection and adds it to clojure.java.jdbc/*db*."
+  "Recognizes dialect of current connection and adds it to jdbc/*db*."
   [& body]
   `(with-recognized-dialect* (fn [] ~@body)))
 
 (defn with-recognized-dialect*
-  "Recognizes dialect of current connection and adds it to clojure.java.jdbc/*db*."
+  "Recognizes dialect of current connection and adds it to jdbc/*db*."
   [f]
   (if (find @#'jdbc/*db* :azql/connection)
     f
