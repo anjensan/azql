@@ -1,7 +1,8 @@
 (ns azql.emit
   (:use [azql util dialect])
   (:require [clojure.string :as s])
-  (:use clojure.template))
+  (:use clojure.template)
+  (:require [clojure.java.jdbc :as jdbc]))
 
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'."))
@@ -47,20 +48,13 @@
 (defn-dialect quote-name
   "Quotes name."
   [s]
-  (str \" s \"))
-
-(defn- emit-quoted-qname-part
-  [p]
-  (let [n (name p)]
-    (if (= "*" n)
-      n
-      (quote-name n))))
+  (let [s (str s)]
+    (if (= s "*") s (str \" s \"))))
 
 (defn emit-qname
-  "Parses qualified name and return SQL. Ex :a.val => \"a\".\"val\"."
+  "Parses and escapes qualified name. Ex :a.val => \"a\".\"val\"."
   [qname]
-  (let [r (parse-qname qname)]
-    (s/join \. (map emit-quoted-qname-part r))))
+  (jdbc/as-str quote-name qname))
 
 (defn qname
   "Constructs qualified name."
