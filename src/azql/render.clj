@@ -12,29 +12,29 @@
    (string? v) (keyword v)
    :else (parenthesis v)))
 
-(defn-dialect render-table
+(defndialect render-table
   [[alias nm]]
   (let [t (as-table-or-subquery nm)]
     (if (= alias t) t [t AS alias])))
 
-(defn-dialect render-field
+(defndialect render-field
   [[alias nm]]
   (if (= alias nm) nm [(render-expression nm) AS alias]))
 
-(defn-dialect render-fields
+(defndialect render-fields
   [{:keys [fields tables]}]
   (if (or (nil? fields) (= fields :*))
     ASTERISK
     (comma-list (map render-field fields))))
 
-(defn-dialect render-join-type
+(defndialect render-join-type
   [jt]
   (get
    {:left LEFT_OUTER_JOIN, :right RIGHT_OUTER_JOIN,
     :full FULL_OUTER_JOIN, :inner INNER_JOIN, :cross CROSS_JOIN}
    jt jt))
 
-(defn-dialect render-from
+(defndialect render-from
   [{:keys [tables joins]}]
   (check-argument (not (empty? joins)) "No tables specified")
   [FROM
@@ -49,13 +49,13 @@
         (render-table [a t])
         (if c [ON (render-expression c)] NONE)]))])
 
-(defn-dialect render-where
+(defndialect render-where
   [{where :where}]
   (if where
     [WHERE (render-expression where)]
     NONE))
 
-(defn-dialect render-order
+(defndialect render-order
   [{order :order}]
   (let [f (fn [[c d]]
             [(render-expression c)
@@ -64,15 +64,15 @@
       [ORDER_BY (comma-list (map f order))]
       NONE)))
 
-(defn-dialect render-modifier
+(defndialect render-modifier
   [{m :modifier}]
   (get {:distinct DISTINCT :all ALL nil NONE} m m))
 
-(defn-dialect max-limit-value
+(defndialect max-limit-value
   []
   Integer/MAX_VALUE)
 
-(defn-dialect render-limit
+(defndialect render-limit
   [{:keys [limit offset]}]
   (if (or limit offset)
     (let [lim (arg (if limit (int limit) (max-limit-value)))]
@@ -80,19 +80,19 @@
        (if offset [OFFSET (arg (int offset))] NONE)])
     NONE))
 
-(defn-dialect render-group
+(defndialect render-group
   [{g :group}]
   (if g
     [GROUP_BY (comma-list g)]
     NONE))
 
-(defn-dialect renger-having
+(defndialect renger-having
   [{h :having}]
   (if h
     [HAVING (render-expression h)]
     NONE))
 
-(defn-dialect render-select
+(defndialect render-select
   [relation]
   [SELECT
    (render-modifier relation)
@@ -104,13 +104,13 @@
    (renger-having relation)
    (render-limit relation)])
 
-(defn-dialect render-delete
+(defndialect render-delete
   [query]
   [DELETE
    (render-from query)
    (render-where query)])
 
-(defn-dialect render-into
+(defndialect render-into
   [{t :table}]
   [INTO (qname t)])
 
@@ -118,7 +118,7 @@
   [records]
   (reduce cset/union (map (comp set keys) records)))
 
-(defn-dialect render-values
+(defndialect render-values
   [{fields :fields records :records}]
   (let [fields (if fields fields (collect-fields records))]
     (->Sql
@@ -134,19 +134,19 @@
         fields)
        (map (partial get (first records)) fields)))))
 
-(defn-dialect render-insert
+(defndialect render-insert
   [query]
   [INSERT
    (render-into query)
    (render-values query)])
 
-(defn-dialect render-update-fields
+(defndialect render-update-fields
   [{:keys [fields]}]
   (comma-list
    (map (fn [[n c]] [SET (qname n) EQUALS (render-expression c)]) fields)))
 
 ; TODO: add joins
-(defn-dialect render-update
+(defndialect render-update
   [{t :table :as query}]
   [UPDATE (render-table t)
    (render-update-fields query)

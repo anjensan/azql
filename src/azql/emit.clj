@@ -6,7 +6,7 @@
 
 (def ^:dynamic *dialect-naming-strategy-installed* false)
 
-(defn-dialect naming-strategy
+(defndialect naming-strategy
   "Returns naming strategy for clojure/jdbc."
   []
   {:entity (fn [x] (str \" x \"))

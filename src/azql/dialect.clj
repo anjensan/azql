@@ -37,7 +37,7 @@
     (current-jdbc-connection-dialect)
     default-dialect))
 
-(defmacro defn-dialect
+(defmacro defndialect
   "Defines multimethod, dispatched by current dialect."
   [name & args-and-body]
   (let [[doc & body]

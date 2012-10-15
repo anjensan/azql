@@ -8,7 +8,7 @@
    :subprotocol "h2"
    :subname "mem://azql-test"})
 
-(defn-dialect myfun [] :default-dialect)
+(defndialect myfun [] :default-dialect)
 
 (use-fixtures
   :each

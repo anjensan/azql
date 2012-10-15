@@ -66,7 +66,7 @@
 
 (deftest test-dialects-specific-op
   (testing "dialect-specific operation"
-     (def-op myfun [] :myfun-default)
-     (defmethod op-myfun ::dialect [] :myfun-dialect)
-     (is (= :myfun-default (render-fn 'myfun)))
-     (is (= :myfun-dialect (binding [*dialect* ::dialect] (render-fn 'myfun))))))
+     (defoperator myfun [] :myfun-default)
+     (defoperator myfun ::dialect [] :myfun-dialect)
+     (is (= :myfun-default (render-operator 'myfun)))
+     (is (= :myfun-dialect (binding [*dialect* ::dialect] (render-operator 'myfun))))))
