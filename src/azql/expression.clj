@@ -87,7 +87,6 @@
    :else (list 'and expr e)))
 
 (def operator-rendering-fns {})
-(def operator-hierarchy (make-hierarchy))
 
 (defn- create-operator-multi
   [s]
@@ -95,7 +94,7 @@
     (str "operator-" (name s))
     current-dialect
     :default
-    #'operator-hierarchy))
+    #'dialects-hierarchy))
 
 (defn add-operator
   "Register new operator."
@@ -139,7 +138,7 @@
   (let [fn-name (symbol (str "operator-" (name s)))
         [d & r] (if (keyword? (first args-and-body))
                 args-and-body
-                (cons :default args-and-body))]
+                (cons default-dialect args-and-body))]
     `(add-operator (quote ~s) ~d (fn ~fn-name ~@r))))
 
 (defoperator raw

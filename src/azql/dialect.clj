@@ -3,6 +3,7 @@
   (:require [clojure.java.jdbc :as jdbc]))
 
 (def ^:const default-dialect ::sql92)
+(def dialects-hierarchy (make-hierarchy))
 
 (def ^{:doc "Current dialect. This option have highest priority." :dynamic true}
       *dialect* nil)
@@ -37,8 +38,16 @@
     (current-jdbc-connection-dialect)
     default-dialect))
 
+(defn register-dialect
+  "Registers new dialect (adds it to hierarchy)."
+  ([dialect parent]
+    (alter-var-root #'dialects-hierarchy derive dialect parent))
+  ([dialect]
+    (register-dialect dialect default-dialect)))
+
 (defmacro defndialect
-  "Defines multimethod, dispatched by current dialect."
+  "Defines multimethod, dispatched by current dialect.
+   Note: multimethod uses separate hierarchy `dialects-hierarchy`."
   [name & args-and-body]
   (let [[doc & body]
         (if (string? (first args-and-body))
@@ -49,8 +58,8 @@
           (vary-meta name assoc :doc doc)
           name)]
     `(do
-       (defmulti ~name current-dialect)
-       (defmethod ~name :default ~@body))))
+       (defmulti ~name current-dialect :hierarchy #'dialects-hierarchy)
+       (defmethod ~name default-dialect ~@body))))
 
 (defmacro with-recognized-dialect
   "Recognizes dialect of current connection and adds it to jdbc/*db*."

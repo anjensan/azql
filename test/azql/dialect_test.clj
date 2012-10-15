@@ -40,8 +40,8 @@
            (is (= ::h2-dialect (jdbc/with-connection h2-database-connection (current-dialect))))))
 
 (deftest test-custom-dialect
-  (derive ::dialect-a :azql.dialect/sql92)
-  (derive ::dialect-b ::dialect-a)
+  (register-dialect ::dialect-a)
+  (register-dialect ::dialect-b ::dialect-a)
   (defmethod myfun ::dialect-a [] :dialect-a)
   (is (= :default-dialect (myfun)))
   (is (= :dialect-a (binding [*dialect* ::dialect-a] (myfun))))
