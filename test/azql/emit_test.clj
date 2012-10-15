@@ -58,7 +58,7 @@
          [[1 2 3] 4] [:x (with-meta [1 2 3] {:batch true}) :y 4]))
 
   (testing "test sql generation and formating"
-    (are [sa z] (= (map->Sql sa) (sql z))
+    (are [sa z] (= (map->Sql sa) (sql* z))
          {:sql "SELECT * FROM \"Table\"" :args ()} [(raw "SELECT") :* (raw "FROM") :Table]
          {:sql "A  a B C D" :args ()} [[[(raw "A  a")] [(raw "B")]] [[[]]] [(raw "C")] (raw "D")]
          {:sql "A ( () )  ,  BC" :args nil} (raw "A ( () )  ,  BC")
@@ -68,9 +68,9 @@
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 
 (deftest test-helpers
-  (is (= "((?) = (?))" (:sql (sql (parenthesis [(parenthesis 1) '= (parenthesis 2)])))))
-  (is (= "? + ?" (:sql (sql (remove-parenthesis (parenthesis [1 '+ 2]))))))
-  (is (= "?, ?, ?" (:sql (sql (comma-list [1 2 3])))))
-  (is (= "?, ?" (:sql (sql (comma-list [(parenthesis 1) 2])))))
+  (is (= "((?) = (?))" (:sql (sql* (parenthesis [(parenthesis 1) '= (parenthesis 2)])))))
+  (is (= "? + ?" (:sql (sql* (remove-parenthesis (parenthesis [1 '+ 2]))))))
+  (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
+  (is (= "?, ?" (:sql (sql* (comma-list [(parenthesis 1) 2])))))
   (is (= 123 (remove-parenthesis (parenthesis 123))))
   (is (= 123 (remove-parenthesis 123))))

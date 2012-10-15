@@ -1,5 +1,5 @@
 (ns azql.core
-  (:use [azql util expression emit render connection dialect])
+  (:use [azql util emit expression render connection dialect])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
@@ -15,27 +15,30 @@
      with-recognized-dialect
      with-global-connection))
 
+(defn sql
+  "Converts object to Sql."
+  ([& args]
+    (with-azql-context
+      (apply sql* args))))
+
 (defrecord Select
     [tables joins fields where
      group having order
      modifier offset limit]
   SqlLike
-  (as-sql [this] (sql (render-select this))))
+  (as-sql [this] (sql* (render-select this))))
 
 (defrecord Insert [table fields records]
   SqlLike
-  (as-sql [this]
-    (sql (render-insert this))))
+  (as-sql [this] (sql* (render-insert this))))
 
 (defrecord Delete [tables joins where]
   SqlLike
-  (as-sql [this]
-    (sql (render-delete this))))
+  (as-sql [this] (sql* (render-delete this))))
 
 (defrecord Update [table fields where]
   SqlLike
-  (as-sql [this]
-    (sql (render-update this))))
+  (as-sql [this] (sql* (render-update this))))
 
 (declare fields)
 (declare fields*)
@@ -161,7 +164,7 @@
 
 (defn- to-sql-params
   [relation]
-  (let [{s :sql p :args} (sql relation)]
+  (let [{s :sql p :args} (sql* relation)]
     (apply vector s p)))
 
 (defmacro with-fetch
@@ -212,7 +215,7 @@
   "Executes update statement."
   [query]
   (with-azql-context
-    (let [{s :sql a :args} (sql query)]
+    (let [{s :sql a :args} (sql* query)]
       (first
         (jdbc/do-prepared s a)))))
 
@@ -224,7 +227,7 @@
   "Executes update statement and returns generated keys."
   [query]
   (with-azql-context
-    (let [{s :sql a :args} (sql query)]
+    (let [{s :sql a :args} (sql* query)]
       (check-argument
         (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
         "Can't return generated keys for batch query.")
@@ -249,7 +252,7 @@
   "Executes batch statement."
   [query]
   (with-azql-context
-    (let [{s :sql a :args} (sql query)]
+    (let [{s :sql a :args} (sql* query)]
       (apply jdbc/do-prepared s (prepare-batch-arguments a)))))
 
 (defn values

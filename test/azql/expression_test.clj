@@ -5,16 +5,16 @@
 (deftest test-render-expression
   (testing "test rendering of expressions"
     (is (= #azql.emit.Sql["((? > ?) AND (? < ?))" [1 2 3 4]]
-           (sql (render-expression ['and ['> 1 2] ['< 3 4]]))))
+           (sql* (render-expression ['and ['> 1 2] ['< 3 4]]))))
     (is (= #azql.emit.Sql["((? + ? + ?) * (? - ? - ?) * (- ?))" [1 2 3 4 5 6 7]]
-           (sql (render-expression ['* ['+ 1 2 3] ['- 4 5 6] ['- 7]]))))
+           (sql* (render-expression ['* ['+ 1 2 3] ['- 4 5 6] ['- 7]]))))
     (is (= #azql.emit.Sql["(\"A\" = ?)" [1]]
-           (sql (render-expression ['= :A 1]))))
+           (sql* (render-expression ['= :A 1]))))
     (is (= #azql.emit.Sql["funn(?, ?)" [1 2]]
-           (sql (render-expression ['funn 1 2])))))
+           (sql* (render-expression ['funn 1 2])))))
 
   (testing "test generic functions and operators"
-    (are [a b] (= (apply ->Sql a) (sql (render-expression b)))
+    (are [a b] (= (apply ->Sql a) (sql* (render-expression b)))
          ["funfun()" nil] '(funfun)
          ["funfun(?)" [1]] '(funfun 1)
          ["my-fun(? + ?, ?, fun(), ffun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
@@ -38,7 +38,7 @@
 
 (deftest test-null-aware-comparasions
   (testing "test null-aware comparasions"
-    (are [a b] (= (str \( a \)) (:sql (sql (render-expression b))))
+    (are [a b] (= (str \( a \)) (:sql (sql* (render-expression b))))
          "\"x\" IS NULL" ['= nil :x]
          "\"y\" IS NULL" ['= :y nil]
          "\"x\" IS NOT NULL" ['<> nil :x]
@@ -56,13 +56,13 @@
 
 (deftest test-like-operator
   (testing "test 'like' operator"
-    (are [a b] (= a (:sql (sql (render-expression b))))
+    (are [a b] (= a (:sql (sql* (render-expression b))))
          "? LIKE ? ESCAPE '\\'" ['like? "a" "b"]
          "\"x\" LIKE \"y\" ESCAPE '\\'" ['like? :x :y]
          "\"x\" LIKE ? ESCAPE '\\'" ['begins? :x "abc"]))
   (testing "test 'begins?' alias"
     (is
-     (= ["x" "abc%"] (:args (sql (render-expression ['begins? "x" "abc"])))))))
+     (= ["x" "abc%"] (:args (sql* (render-expression ['begins? "x" "abc"])))))))
 
 (deftest test-dialects-specific-op
   (testing "dialect-specific operation"

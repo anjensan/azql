@@ -118,15 +118,18 @@
   nil
   (as-sql [this] (arg nil)))
 
-(defn sql
-  "Converts object to Sql."
+(def NONE (raw ""))
+
+(defn sql*
+  "Converts object to Sql. Doesn't install azql context.
+   You should prefer azql.core/sql."
+  ([] NONE)
   ([v]
-    (with-dialect-namind-strategy
-      (if (sql? v)
-        v
-        (let [v (as-sql v)]
-          (assoc v :args (vec (:args v)))))))
-  ([v & r] (sql (cons v r))))
+    (if (sql? v)
+      v
+      (let [v (as-sql v)]
+        (assoc v :args (vec (:args v))))))
+([v & r] (sql* (cons v r))))
 
 (do-template
  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
@@ -142,7 +145,7 @@
 (do-template
  [kname value] (def kname (raw value))
 
- NONE "", COMMA ",",ASTERISK "*", QMARK "?", LP "(", RP ")",
+ COMMA ",",ASTERISK "*", QMARK "?", LP "(", RP ")",
  EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
  LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")

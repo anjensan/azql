@@ -1,6 +1,6 @@
 (ns azql.core-test
   (:use clojure.test
-        [azql core emit dialect]))
+        [azql emit dialect core]))
 
 ;; custom dialect without quoting
 (defmethod azql.emit/naming-strategy ::noquote-dialect [] identity)
@@ -8,7 +8,7 @@
 
 (deftest test-simple-queries
   (testing "simple selects from one table"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM X"
          (select (from :X))
          "SELECT * FROM Table1 AS a"
@@ -28,7 +28,7 @@
          (select [:a :b] (from :A))))
 
   (testing "select from 2 tables, full join"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql*  z)))
          "SELECT * FROM A, B"
          (select (from :A) (from :B))
          "SELECT * FROM A AS a, B"
@@ -46,7 +46,7 @@
 
 (deftest test-where-clause
   (testing "simple where with one table"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql*  z)))
          "SELECT * FROM Table1 WHERE (id = ?)"
          (select (from "Table1") (where (= :id 10)))
          "SELECT * FROM Table1 WHERE ((id = ?) AND (email = ?))"
@@ -60,7 +60,7 @@
           (where (and (= :id 10) (not= 2 :fi)))
           (where (= :email "x@example.com")))))
   (testing "where with aliases"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql*  z)))
          "SELECT * FROM A AS a, B AS b WHERE (a.x = b.y)"
          (select (from :a :A) (from :b :B) (where (= :a.x :b.y)))
          "SELECT * FROM A, B, C WHERE ((A = a) AND ((A.x + C.y) > B.z))"
@@ -69,7 +69,7 @@
 
 (deftest test-complex-fields
   (testing "select expression"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT (a + b) AS c FROM Table"
          (select (from "Table") (fields {:c (+ :a :b)}))
          "SELECT (a * b * c) AS z FROM Table"
@@ -79,7 +79,7 @@
 
 (deftest test-joins
   (testing "test cross join"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql*  z)))
          "SELECT * FROM A AS a CROSS JOIN B AS b"
          (select
           (from :a "A")
@@ -97,14 +97,14 @@
           (join* (raw "COOL JOIN") :b "B" nil)))
 
   (testing "test inner joins"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A AS a INNER JOIN B AS b ON (a.x = b.y)"
          (select
           (from :a "A")
           (join :b "B" (= :a.x :b.y)))))
 
   (testing "test outer joins"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A LEFT OUTER JOIN B ON (x = y)"
          (select (from :A) (join-left :B (= :x :y)))
          "SELECT * FROM A LEFT OUTER JOIN B AS b ON (x = y)"
@@ -121,7 +121,7 @@
 (deftest test-order-by
 
   (testing "test simple orderby"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A AS a ORDER BY x"
          (select (from :a "A") (order :x))
          "SELECT * FROM A AS a ORDER BY x ASC"
@@ -132,7 +132,7 @@
          (select (from :a "A") (order :a.z :desc) (order :a.y :asc) (order :a.x))))
 
   (testing "test order by expression"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A ORDER BY (x + y)"
          (select (from :A) (order (+ :x :y)))
          "SELECT * FROM A ORDER BY cos(sin(x)) DESC"
@@ -142,7 +142,7 @@
 
 (deftest test-limit-and-offset
   (testing "test offset"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM X LIMIT ?"
          (select (from "X") (limit 10))
          "SELECT * FROM X LIMIT ? OFFSET ?"
@@ -151,14 +151,14 @@
 (deftest test-group-by
 
   (testing "test simple grouping"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT a FROM T GROUP BY a"
          (select (from "T") (group [:a]) (fields [:a]))
          "SELECT a, b FROM T GROUP BY a, b"
          (select (from "T") (group [:a :b]) (fields [:a :b]))))
 
   (testing "test grouping with having on"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM T GROUP BY a HAVING (a > ?)"
          (select (from "T") (group [:a]) (having (> :a 1)))
          "SELECT a, b FROM T GROUP BY a, b HAVING ((a > ?) AND (? < b))"
@@ -167,7 +167,7 @@
 
 (deftest test-subqueries
   (testing "testing subqueries in joins"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM (SELECT * FROM A) AS a"
          (select (from :a (select (from :A))))
          "SELECT x FROM (SELECT x FROM A) AS a"
@@ -180,7 +180,7 @@
           (join :b (select (from :B)) (= :x :y)))))
 
   (testing "test operators `exists`, `any`, `all`"
-    (are [s z] (= s (:sql (sql z)))
+    (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A WHERE (EXISTS (SELECT * FROM B WHERE (x = y)))"
          (select (from :A) (where (exists? (select (from :B) (where (= :x :y))))))
          "SELECT * FROM A WHERE (NOT EXISTS (SELECT * FROM B WHERE (A.x = B.x)))"

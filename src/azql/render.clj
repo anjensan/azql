@@ -123,7 +123,7 @@
   (let [fields (if fields fields (collect-fields records))]
     (->Sql
      (:sql
-      (sql
+      (sql*
        (parenthesis (comma-list fields))
        VALUES
        (parenthesis
