@@ -3,7 +3,7 @@
         [azql core emit dialect]))
 
 ;; custom dialect without quoting
-(defmethod azql.emit/quote-name ::noquote-dialect [x] x)
+(defmethod azql.emit/naming-strategy ::noquote-dialect [] identity)
 (use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::noquote-dialect] (f))))
 
 (deftest test-simple-queries

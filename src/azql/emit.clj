@@ -4,6 +4,23 @@
   (:use clojure.template)
   (:require [clojure.java.jdbc :as jdbc]))
 
+(def ^:dynamic *dialect-naming-strategy-installed* false)
+
+(defn-dialect naming-strategy
+  "Returns naming strategy for clojure/jdbc."
+  []
+  {:entity (fn [x] (str \" x \"))
+   :keyword s/lower-case})
+
+(defmacro with-dialect-namind-strategy
+  "Registers register AZQL naming strategy in `clojure/jdbc.`"
+  [& body]
+  `(let [f# (fn [] ~@body)]
+     (if *dialect-naming-strategy-installed*
+       (f#)
+       (binding [*dialect-naming-strategy-installed* true]
+         (jdbc/with-naming-strategy (naming-strategy) (f#))))))
+
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'."))
 
@@ -45,16 +62,18 @@
       (when (> (count n) 1)
         (first n)))))
 
-(defn-dialect quote-name
-  "Quotes name."
+(defn quote-name
+  "Quotes name. Doesn't split on '.'."
   [s]
-  (let [s (str s)]
-    (if (= s "*") s (str \" s \"))))
+  (with-dialect-namind-strategy
+    (let [s (str s)]
+      (if (= s "*") s (#'jdbc/*as-str* s)))))
 
 (defn emit-qname
   "Parses and escapes qualified name. Ex :a.val => \"a\".\"val\"."
   [qname]
-  (jdbc/as-str quote-name qname))
+  (with-dialect-namind-strategy
+    (jdbc/as-str quote-name qname)))
 
 (defn qname
   "Constructs qualified name."
@@ -102,10 +121,11 @@
 (defn sql
   "Converts object to Sql."
   ([v]
-     (if (sql? v)
-       v
-       (let [v (as-sql v)]
-         (assoc v :args (vec (:args v))))))
+    (with-dialect-namind-strategy
+      (if (sql? v)
+        v
+        (let [v (as-sql v)]
+          (assoc v :args (vec (:args v)))))))
   ([v & r] (sql (cons v r))))
 
 (do-template
