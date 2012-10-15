@@ -9,7 +9,7 @@
   "Executes function in a scope of the global connection."
   [f]
   (if (jdbc/find-connection)
-    (with-recognized-dialect* f)
+    (f)
     (if-let [c global-connection]
       (with-bindings*
         ; copied from `clojure.java.jdbc/with-connection`

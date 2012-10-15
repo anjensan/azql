@@ -1,10 +1,19 @@
 (ns azql.core
-  (:use [azql util expression emit render connection])
+  (:use [azql util expression emit render connection dialect])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
   (:require [clojure.string :as s]
             [clojure.walk :as walk]
             [clojure.java.jdbc :as jdbc]))
+
+(defmacro with-azql-context
+  "Executes code in azql context (global connection, naming strategy ect.).
+   All public functions automatically call this macro."
+  [& body]
+  `(-> (do ~@body)
+     with-dialect-namind-strategy
+     with-recognized-dialect
+     with-global-connection))
 
 (defrecord Select
     [tables joins fields where
@@ -160,14 +169,14 @@
   [[v relation :as vr] & body]
   (assert (vector? vr))
   (assert (= 2 (count vr)))
-  `(let [sp# (#'to-sql-params ~relation)]
-     (with-global-connection
+  `(with-azql-context
+    (let [sp# (#'to-sql-params ~relation)]
        (jdbc/with-query-results ~v sp# ~@body))))
 
 (defn fetch-all
   "Executes query and returns results as a vector."
   [relation]
-  (with-global-connection
+  (with-azql-context
     (jdbc/with-query-results* (to-sql-params relation) vec)))
 
 (defn- one-result
@@ -188,13 +197,13 @@
   "Executes query and returns first element or throws an exception
    if resultset contains more than one record."
   [relation]
-  (with-global-connection
+  (with-azql-context
     (jdbc/with-query-results* (to-sql-params relation) one-result)))
 
 (defn fetch-single
   "Executes quiery and return single result value. Useful for aggregate functions."
   [relation]
-  (with-global-connection
+  (with-azql-context
     (jdbc/with-query-results* (to-sql-params relation) single-result)))
 
 ;; updates
@@ -202,10 +211,10 @@
 (defn execute!
   "Executes update statement."
   [query]
-  (let [{s :sql a :args} (sql query)]
-    (first
-     (with-global-connection
-       (jdbc/do-prepared s a)))))
+  (with-azql-context
+    (let [{s :sql a :args} (sql query)]
+      (first
+        (jdbc/do-prepared s a)))))
 
 (defn- batch-arg?
   [v]
@@ -214,11 +223,11 @@
 (defn execute-return-keys!
   "Executes update statement and returns generated keys."
   [query]
-  (let [{s :sql a :args} (sql query)]
-    (check-argument
-     (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
-     "Can't return generated keys for batch query.")
-    (with-global-connection
+  (with-azql-context
+    (let [{s :sql a :args} (sql query)]
+      (check-argument
+        (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
+        "Can't return generated keys for batch query.")
       (jdbc/do-prepared-return-keys s (map #(if (batch-arg? %) (first %) %) a)))))
 
 (defn- prepare-batch-arguments
@@ -239,8 +248,8 @@
 (defn execute-batch!
   "Executes batch statement."
   [query]
-  (let [{s :sql a :args} (sql query)]
-    (with-global-connection
+  (with-azql-context
+    (let [{s :sql a :args} (sql query)]
       (apply jdbc/do-prepared s (prepare-batch-arguments a)))))
 
 (defn values

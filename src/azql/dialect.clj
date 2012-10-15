@@ -60,8 +60,8 @@
 (defn with-recognized-dialect*
   "Recognizes dialect of current connection and adds it to jdbc/*db*."
   [f]
-  (if (find @#'jdbc/*db* :azql/connection)
-    f
+  (if (find @#'jdbc/*db* :azql/dialect)
+    (f)
     (let [d (or *dialect* (current-jdbc-connection-dialect))]
       (check-state d "Can't recognize SQL dialect.")
       (with-bindings* {#'jdbc/*db* (assoc @#'jdbc/*db* :azql/dialect d)}
