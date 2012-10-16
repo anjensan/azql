@@ -170,6 +170,8 @@
 (deftest test-subqueries
   (testing "testing subqueries in joins"
     (are [s z] (= s (:sql (sql* z)))
+         "SELECT * FROM (SELECT * FROM A)"
+         (select (from (select (from :A))))
          "SELECT * FROM (SELECT * FROM A) AS a"
          (select (from :a (select (from :A))))
          "SELECT x FROM (SELECT x FROM A) AS a"

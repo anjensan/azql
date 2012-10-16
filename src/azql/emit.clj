@@ -165,9 +165,30 @@
   [values]
   (interpose COMMA (map remove-parenthesis values)))
 
-(defn as-alias
-  "Interprets value as column/table alias"
+(defn as-alias-safe
+  "Interprets value as column/table alias."
   [n]
   (check-argument (or (keyword? n) (string? n))
                   "Invalid alias, extected keyword or string.")
   (keyword (name n)))
+
+(let [sa (atom 0)]
+  (defn generate-surrogate-alias
+    "Generates surrogate alias."
+    []
+    (keyword (str "__" (swap! sa inc)))))
+
+(defn surrogate-alias?
+  "Checks if alias is surrogate."
+  [n]
+  (let [n (name n)]
+    (re-matches #"__\d+" n)))
+
+(defn as-alias
+  "Converts value into alias if possible.
+   Returns surrogate alias otherwise"
+  [n]
+  (cond
+    (keyword? n) n
+    (string? n) (keyword n)
+    :else (generate-surrogate-alias)))

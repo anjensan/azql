@@ -15,7 +15,7 @@
   "Add fieldlist to query."
   [f q]
   (check-argument (nil? (:fields q)) "Relation already has fields.")
-  (assoc q :fields {(as-alias f) f}))
+  (assoc q :fields {(as-alias-safe f) f}))
 
 (defn- par
   ([a] (parenthesis a))

@@ -74,3 +74,14 @@
   (is (= "?, ?" (:sql (sql* (comma-list [(parenthesis 1) 2])))))
   (is (= 123 (remove-parenthesis (parenthesis 123))))
   (is (= 123 (remove-parenthesis 123))))
+
+(deftest test-surrogate-aliases
+  (is (surrogate-alias? (generate-surrogate-alias)))
+  (is (not (surrogate-alias? :alias)))
+  (is (not (surrogate-alias? :alias.subalias)))
+  (is (not (surrogate-alias? "string")))
+  (is (not= (generate-surrogate-alias) (generate-surrogate-alias)))
+  (is (not= (as-alias [1]) (as-alias [1])))
+  (is (= (as-alias-safe :ax) (as-alias-safe :ax)))
+  (is (thrown? IllegalArgumentException (as-alias-safe [1])))
+  (is (keyword? (as-alias [1]))))

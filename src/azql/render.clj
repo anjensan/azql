@@ -15,7 +15,9 @@
 (defndialect render-table
   [[alias nm]]
   (let [t (as-table-or-subquery nm)]
-    (if (= alias t) t [t AS alias])))
+    (if (or (= alias t) (surrogate-alias? alias))
+      t
+      [t AS alias])))
 
 (defndialect render-field
   [[alias nm]]

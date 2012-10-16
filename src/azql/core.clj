@@ -76,7 +76,8 @@
    ([relation alias table cond]
       `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
    ([relation table cond]
-      `(join* ~relation ~join-key ~table ~table ~(prepare-macro-expression cond))))
+     `(let [table# ~table]
+        (join* ~relation ~join-key table# table# ~(prepare-macro-expression cond)))))
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
@@ -90,7 +91,10 @@
   [fs]
   (if (map? fs)
     (map-vals prepare-macro-expression fs)
-    (into {} (map (juxt as-alias prepare-macro-expression) fs))))
+    (let [aa (if (= 1 (count fs))
+               as-alias
+               as-alias-safe)]
+      (into {} (map (juxt aa prepare-macro-expression) fs)))))
 
 (defmacro fields
   "Adds field list to query, support macro expressions."
