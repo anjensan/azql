@@ -46,7 +46,7 @@
      (render-table [a t]))
    (for [[a jn c] (rest joins) :let [t (tables a)]]
      (if (nil? jn)
-       [COMMA (render-table [a t])]
+       [NOSP COMMA (render-table [a t])]
        [(render-join-type jn)
         (render-table [a t])
         (if c [ON (render-expression c)] NONE)]))])

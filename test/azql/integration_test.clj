@@ -158,7 +158,7 @@
 (deftest test-raw-queries
   (is (= 3 (count (fetch-all (sql '(select * from :users))))))
   (is (= 3 (fetch-single
-            (sql ['select 'count LP '* RP 'from :users])))))
+            (sql ['select 'count LEFT_PAREN '* RIGHT_PAREN 'from :users])))))
 
 (deftest test-insert
 

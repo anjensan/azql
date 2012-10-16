@@ -59,11 +59,14 @@
 
   (testing "test sql generation and formating"
     (are [sa z] (= (map->Sql sa) (sql* z))
-         {:sql "SELECT * FROM \"Table\"" :args ()} [(raw "SELECT") :* (raw "FROM") :Table]
-         {:sql "A  a B C D" :args ()} [[[(raw "A  a")] [(raw "B")]] [[[]]] [(raw "C")] (raw "D")]
+         {:sql "SELECT * FROM \"Table\"" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
+         {:sql "A  a B C D" :args nil} [[[(raw "A  a")] [(raw "B")]] [[[]]] [(raw "C")] (raw "D")]
          {:sql "A ( () )  ,  BC" :args nil} (raw "A ( () )  ,  BC")
-         {:sql "A B" :args ()}  [(raw "A") NONE NONE NONE NONE (raw "B")]
-         {:sql "A, B, C" :args ()} [(raw "A") NONE COMMA NONE (raw "B") NONE NONE COMMA NONE NONE (raw "C")]
+         {:sql "A B" :args nil}  [NONE NONE (raw "A") NONE NONE NONE NONE (raw "B") NONE NONE]
+         {:sql "A, B, C" :args nil} [(raw "A") NOSP COMMA (raw "B") NOSP COMMA (raw "C")]
+         {:sql "AB" :args nil} [(raw "A") NOSP NOSP (raw "B")]
+         {:sql "AB" :args nil} [(raw "A") NOSP NONE NOSP (raw "B")]
+         {:sql "AB" :args nil} [(raw "A") NONE NOSP NONE (raw "B")]
          {:sql "A ? B ?" :args ["a" "b"]} [(raw "A") "a" (raw "B") "b"]
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 

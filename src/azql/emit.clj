@@ -80,26 +80,25 @@
   ([qn] (Sql. (emit-qname qn) nil))
   ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
 
-(defn- insert-space?
-  [^String a ^String b]
-  (not
-   (or
-    (nil? a)
-    (nil? b)
-    (.isEmpty b)
-    (.startsWith b ")")
-    (.endsWith a "(")
-    (.startsWith b ","))))
+(def ^{:doc "Empty token. Preserve space."} NOSP (Sql. "" nil))
+(def ^{:doc "Empty token."} NONE (Sql. "" nil))
+
+(defn- special?
+  [t]
+  (or (identical? t NOSP) (identical? t NONE)))
 
 (defn- join-sql-strings
-  [strings]
+  [sqls]
   (let [sb (StringBuilder.)]
-    (reduce (fn [prev curr]
-              (when (and (not (nil? prev)) (insert-space? prev curr))
-                (.append sb \space))
-              (.append sb curr)
-              curr) nil strings)
-    (str sb)))
+    (loop [prev-nosp true, sq sqls]
+      (when-let [curr (first sq)]
+        (let [nosp (identical? NOSP curr)
+              spec (special? curr)]
+          (when-not (or spec prev-nosp)
+            (.append sb \space))
+          (.append sb (:sql curr))
+          (recur (and spec (or prev-nosp nosp)) (rest sq)))))
+    (.toString sb)))
 
 (extend-protocol SqlLike
   clojure.lang.Sequential
@@ -107,8 +106,8 @@
     (if (:batch (meta this))
       (batch-arg this)
       (let [s (map as-sql (eager-filtered-flatten this #(not (:batch (meta %)))))]
-        (Sql. (join-sql-strings (map :sql s))
-              (mapcat :args s)))))
+        (Sql. (join-sql-strings s)
+              (seq (mapcat :args s))))))
   clojure.lang.Keyword
   (as-sql [this] (qname this))
   clojure.lang.Symbol
@@ -118,18 +117,12 @@
   nil
   (as-sql [this] (arg nil)))
 
-(def NONE (raw ""))
-
 (defn sql*
   "Converts object to Sql. Doesn't install azql context.
    You should prefer azql.core/sql."
   ([] NONE)
-  ([v]
-    (if (sql? v)
-      v
-      (let [v (as-sql v)]
-        (assoc v :args (vec (:args v))))))
-([v & r] (sql* (cons v r))))
+  ([v] (if (sql? v) v (as-sql v)))
+  ([v & r] (as-sql (cons v r))))
 
 (do-template
  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
@@ -145,7 +138,8 @@
 (do-template
  [kname value] (def kname (raw value))
 
- COMMA ",",ASTERISK "*", QMARK "?", LP "(", RP ")",
+ COMMA ",",ASTERISK "*", QMARK "?",
+ LEFT_PAREN "(", RIGHT_PAREN ")",
  EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
  LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
@@ -153,7 +147,7 @@
 (defn parenthesis
   "Surrounds expression with parenthesis."
   [e]
-  ^{::orig e} [LP e RP])
+  ^{::orig e} [LEFT_PAREN NOSP e NOSP RIGHT_PAREN])
 
 (defn remove-parenthesis
   "Removes parenthesis."
@@ -163,7 +157,7 @@
 (defn comma-list
   "Returns values separated by comma."
   [values]
-  (interpose COMMA (map remove-parenthesis values)))
+  (interpose [NOSP COMMA] (map remove-parenthesis values)))
 
 (defn as-alias-safe
   "Interprets value as column/table alias."

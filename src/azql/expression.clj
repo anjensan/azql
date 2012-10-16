@@ -50,11 +50,12 @@
 
 (defndialect render-generic-function
   "Renders generic function."
-  ([f] (raw (str (name f) "()")))
+  ([f] [(raw (name f)) NOSP (raw "()")])
   ([f & r]
-    [(raw (str (name f) "("))
+    [(raw (name f))
+     NOSP LEFT_PAREN NOSP
      (comma-list r)
-     (raw ")")]))
+     NOSP RIGHT_PAREN]))
 
 (defn- canonize-operator-symbol
   [s]
@@ -227,7 +228,7 @@
    :else (par a IN (parenthesis (comma-list b)))))
 
 (defoperator count
-  ([r] [COUNT (parenthesis r)])
+  ([r] [COUNT NOSP (parenthesis r)])
   ([d r]
      (case d
        :distinct [COUNT (par DISTINCT r)]
@@ -236,19 +237,19 @@
 
 (defoperator max
   [x]
-  [MAX (par x)])
+  [MAX NOSP (par x)])
 
 (defoperator min
   [x]
-  [MIN (par x)])
+  [MIN NOSP (par x)])
 
 (defoperator avg
   [x]
-  [AVG (par x)])
+  [AVG NOSP (par x)])
 
 (defoperator sum
   [x]
-  [SUM (par x)])
+  [SUM NOSP (par x)])
 
 (defoperator exists?
   [q]
@@ -272,10 +273,10 @@
 
 (defoperator like?
   [a b]
-  [a LIKE b ESCAPE (like-pattern-escaping-sql)])
+  (par a LIKE b ESCAPE (like-pattern-escaping-sql)))
 
 (defoperator begins?
   [a b]
   (check-argument (string? b) "Pattern should be string.")
-  [a LIKE (str (escape-like-pattern b) "%")
-   ESCAPE (like-pattern-escaping-sql)])
+  (par a LIKE (str (escape-like-pattern b) "%")
+   ESCAPE (like-pattern-escaping-sql)))

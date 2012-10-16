@@ -57,9 +57,9 @@
 (deftest test-like-operator
   (testing "test 'like' operator"
     (are [a b] (= a (:sql (sql* (render-expression b))))
-         "? LIKE ? ESCAPE '\\'" ['like? "a" "b"]
-         "\"x\" LIKE \"y\" ESCAPE '\\'" ['like? :x :y]
-         "\"x\" LIKE ? ESCAPE '\\'" ['begins? :x "abc"]))
+         "(? LIKE ? ESCAPE '\\')" ['like? "a" "b"]
+         "(\"x\" LIKE \"y\" ESCAPE '\\')" ['like? :x :y]
+         "(\"x\" LIKE ? ESCAPE '\\')" ['begins? :x "abc"]))
   (testing "test 'begins?' alias"
     (is
      (= ["x" "abc%"] (:args (sql* (render-expression ['begins? "x" "abc"])))))))
