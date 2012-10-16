@@ -15,6 +15,7 @@ Main goals of this project:
 
 Add the following to your project.clj:
 
+	:::clojure
 	[azql "0.1.0-SNAPSHOT"]
 
 
@@ -24,6 +25,7 @@ Add the following to your project.clj:
 
 AZQL syntax is quite similar to SQL:
 
+	:::clojure
 	(select
 	  (fields [:id :name :email])
 	  (from :a :Users)
@@ -32,6 +34,7 @@ AZQL syntax is quite similar to SQL:
 
 After macroexpansions:
 
+	:::clojure
 	(->
 	  (select*)
 	  (fields* {:id :id, :name :name, :email :email})
@@ -49,11 +52,13 @@ Library provides some alternatives:
 
 Example:
 
+	:::clojure
 	(with-fetch [f (select (from :Users))]
 	  (reduce + (map :rating f)))
 
 It is possible to compose additional where's:
 
+	:::clojure
 	(def all-users (select (from :Users)))
 	(def banned-users (-> all-users (where (= :status "BANNED"))))
 	(def banned-admins (-> banned-users (where (= :role "ADMIN")))
@@ -61,6 +66,7 @@ It is possible to compose additional where's:
 
 The actual SQL is available trough the function `sql`:
 
+	:::clojure
 	user> (sql (select (from :Users) (where (= :id 123))))
 	#azql.emit.Sql{:sql "SELECT * FROM \"Users\" WHERE (\"id\" = ?)", :args [123]}
 
@@ -68,7 +74,8 @@ The actual SQL is available trough the function `sql`:
 ### Joins
 
 AZQL supports all types of joins:
-
+	
+	:::clojure
 	(select
 	  (from :a :A)                      ; table 'A', alias 'a', implicit cross join
 	  (join :b :B (= :a.x :b.y))        ; inner join
@@ -79,6 +86,7 @@ AZQL supports all types of joins:
 The only restriction is that first join must be 'implicit cross join' (function `from`).
 It is possible to use vendor-specific joins:
 
+	:::clojure
 	(select
 	  (from :a :TableOne)
 	  (join* (raw "COOL JOIN") :b :TableTwo (= :b.x = :a.y)))
@@ -88,6 +96,7 @@ It is possible to use vendor-specific joins:
 
 You can use ordering:
 
+	:::clojure
 	(select
 	  (from :A)
 	  (order :field1)
@@ -101,6 +110,7 @@ It will produce 'SELECT * FROM "A" ORDER BY ("x" + "y") ASC, "field2" DESC, "fie
 
 AZQL supports grouping:
 
+	:::clojure
 	(select
 	  (fields {:name :u.name})
 	  (from :u :Users)
@@ -108,13 +118,12 @@ AZQL supports grouping:
 	  (group :u.name)
 	  (having (> 10 (count :p.id))))
 
-You *must* specify aliases for all columns.
-
 
 ### Subqueries
 
-Library supports subquieries:
+Library supports subqueries:
 
+	:::clojure
 	(def all-users (select (from :Users)))
 	(def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
 	(fetch-all all-active-users)
@@ -125,17 +134,20 @@ Library supports subquieries:
 Library supports all CRUD operations.
 Intert new records:
 
+	:::clojure
 	(insert! :table
 	  (values [{:field1 1, :field2 "value"}, {:field1 2, :field2 "value"}]))
 
 Columns can be explicitly specified:
 
+	:::clojure
 	(insert! :table
 	  (fields [:a :b])
 	  (values [{:a 1, :b 2}, {:a 3, :b 4}]))
 
 Update:
 
+	:::clojure
 	(update! :table
 	  (setf :cnt (+ :cnt 1))
 	  (setf :vale "new-value")
@@ -143,6 +155,7 @@ Update:
 
 Delete:
 
+	:::clojure
 	(delete! :table (where (= :id 1)))
 
 
