@@ -26,6 +26,10 @@
        (persistent! (rec (transient []) [col]))))
   ([col] (eager-filtered-flatten col (constantly true))))
 
+(definline keyword-or-string?
+  [v]
+  `(let [v# ~v] (or (keyword? v#) (string? v#))))
+
 (defn illegal-argument [& msg]
   (throw (IllegalArgumentException. (s/join msg))))
 

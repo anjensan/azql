@@ -168,9 +168,9 @@
 (defn as-alias-safe
   "Interprets value as column/table alias."
   [n]
-  (check-argument (or (keyword? n) (string? n))
+  (check-argument (keyword-or-string? n)
                   "Invalid alias, extected keyword or string.")
-  (keyword (name n)))
+  (keyword n))
 
 (let [sa (atom 0)]
   (defn generate-surrogate-alias

@@ -2,9 +2,7 @@
   (:use [azql util emit expression render connection dialect])
   (:use [clojure.set :only [difference]])
   (:use clojure.template)
-  (:require [clojure.string :as s]
-            [clojure.walk :as walk]
-            [clojure.java.jdbc :as jdbc]))
+  (:require [clojure.java.jdbc :as jdbc]))
 
 (defmacro with-azql-context
   "Executes code in azql context (global connection, naming strategy ect.).
@@ -42,6 +40,9 @@
 
 (declare fields)
 (declare fields*)
+(declare select)
+(declare select*)
+(declare from)
 
 (defn select*
   "Creates empty select."
@@ -54,13 +55,38 @@
   [a & body]
   (emit-threaded-expression select*
                             (list* (if (list? a) a `(fields ~a)) body)))
+
+(defn table
+  "Select all records from table."
+  [tname]
+  (vary-meta (select (from tname)) assoc ::single-table true))
+
+(defn- single-table-select?
+  [q]
+  (when (and
+          (::single-table (meta q))
+          (== 1 (count (:tables q))))
+    (let [[a t] (first (:tables q))]
+      (and
+        (keyword-or-string? t)
+        (= (name a) (name t))
+        ; contains only :tables & :joins
+        (== 2 (count (filter (complement nil?) (vals q))))))))
+
+(defn- unwrap-single-table
+  [q]
+  (if (single-table-select? q)
+    (val (first (:tables q)))
+    q))
+
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as relation} type alias table cond]
-  (let [a (as-alias alias)]
-    (check-state (not (contains? table a)) (str "Relation already has table " a))
+  (let [a (as-alias alias)
+        t (unwrap-single-table table)]
+    (check-state (not (contains? tables a)) (str "Relation already has table " a))
     (assoc relation
-      :tables (assoc tables a table)
+      :tables (assoc tables a t)
       :joins (conj (vec joins) [a type cond]))))
 
 (do-template

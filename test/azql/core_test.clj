@@ -1,6 +1,5 @@
 (ns azql.core-test
-  (:use clojure.test
-        [azql emit dialect core]))
+  (:use clojure.test [azql emit dialect core]))
 
 ;; custom dialect without quoting
 (register-dialect ::noquote-dialect)
@@ -12,9 +11,13 @@
   (testing "simple selects from one table"
     (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM X"
+         (table :X)
+         "SELECT * FROM X"
          (select (from :X))
          "SELECT * FROM Table1 AS a"
          (select (from :a "Table1"))
+         "SELECT * FROM Table1 AS a"
+         (select (from :a (table "Table1")))
          "SELECT DISTINCT * FROM Table1 AS a"
          (select (modifier :distinct) (from :a "Table1"))
          "SELECT * FROM Table1"
@@ -170,6 +173,8 @@
 (deftest test-subqueries
   (testing "testing subqueries in joins"
     (are [s z] (= s (:sql (sql* z)))
+         "SELECT * FROM A"
+         (select (from (table :A)))
          "SELECT * FROM (SELECT * FROM A)"
          (select (from (select (from :A))))
          "SELECT * FROM (SELECT * FROM A) AS a"
@@ -197,3 +202,14 @@
          (select (from :A) (where (> :p (some :t (select (from :B))))))
          "SELECT * FROM A WHERE (z <> ALL (SELECT t FROM X WHERE (x <> ?)))"
          (select (from :A) (where (<> :z (all :t (select (from :X) (where (<> :x 1))))))))))
+
+(def single-table-select? #'azql.core/single-table-select?)
+
+(deftest test-select-from-single-table
+  (is (single-table-select? (table :X)))
+  (is (single-table-select? (table "X")))
+  (is (not (single-table-select? (select (from :X)))))
+  (is (not (single-table-select? (select (from "X")))))
+  (is (not (single-table-select? (-> (table :X) (order :X)))))
+  (is (not (single-table-select? (-> (table :X) (join-cross :T)))))
+  (is (not (single-table-select? (-> (table "X") (limit 100))))))
