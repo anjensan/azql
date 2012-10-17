@@ -1,7 +1,7 @@
 (ns azql.core
   (:use [azql util emit expression render connection dialect])
-  (:use [clojure.set :only [difference]])
   (:use clojure.template)
+  (:require [clojure.string :as s])
   (:require [clojure.java.jdbc :as jdbc]))
 
 (defmacro with-azql-context
@@ -37,6 +37,12 @@
 (defrecord Update [table fields where]
   SqlLike
   (as-sql [this] (sql* (render-update this))))
+
+(do-template
+  [v]
+  (defmethod print-method v [s ^Appendable w]
+    (.append w (interpolate-sql s)))
+  Select Insert Update Delete)
 
 (declare fields)
 (declare fields*)
@@ -239,6 +245,7 @@
   [relation]
   (with-azql-context
     (jdbc/with-query-results* (to-sql-params relation) single-result)))
+
 
 ;; updates
 

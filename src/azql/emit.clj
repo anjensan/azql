@@ -189,3 +189,24 @@
     (keyword? n) n
     (string? n) (keyword n)
     :else (generate-surrogate-alias)))
+
+(defn- format-interpolated-sql-arg
+  [a]
+  (if (sequential? a)
+    (str
+      "["
+      (s/join ", " (map #(if (nil? %) "NULL" (str %)) a))
+      "]")
+    (if (nil? a)
+      "NULL"
+      (str a))))
+
+(defn ^String interpolate-sql
+  "Replaces placeholders with actual values.
+   For debug purposes only!"
+  [q]
+  (let [{ss :sql as :args} (as-sql q)]
+    (reduce
+      (fn [s a]
+        (s/replace-first s #"\?" (format-interpolated-sql-arg a)))
+      ss as)))
