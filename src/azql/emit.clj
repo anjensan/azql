@@ -147,20 +147,20 @@
  LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
 
-(defn parenthesis
-  "Surrounds expression with parenthesis."
+(defn parentheses
+  "Surrounds token with parentheses."
   [e]
-  ^{::orig e} [LEFT_PAREN NOSP e NOSP RIGHT_PAREN])
+  ^{::without-parentheses e} [LEFT_PAREN NOSP e NOSP RIGHT_PAREN])
 
-(defn remove-parenthesis
+(defn remove-parentheses
   "Removes parenthesis."
   [e]
-  (or (::orig (meta e)) e))
+  (or (::without-parentheses (meta e)) e))
 
 (defn comma-list
   "Returns values separated by comma."
   [values]
-  (interpose [NOSP COMMA] (map remove-parenthesis values)))
+  (interpose [NOSP COMMA] (map remove-parentheses values)))
 
 (defn as-alias-safe
   "Interprets value as column/table alias."

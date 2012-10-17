@@ -5,12 +5,12 @@
 
 (defn- as-table-or-subquery
   "Converts value to table name or subquery.
-   Surrounds subquery into parenthesis."
+   Surrounds subquery with parentheses."
   [v]
   (cond
    (keyword? v) v
    (string? v) (keyword v)
-   :else (parenthesis v)))
+   :else (parentheses v)))
 
 (defndialect render-table
   [[alias nm]]
@@ -126,9 +126,9 @@
     (->Sql
      (:sql
       (sql*
-       (parenthesis (comma-list fields))
+       (parentheses (comma-list fields))
        VALUES
-       (parenthesis
+       (parentheses
         (comma-list (repeat (count fields) QMARK)))))
      (if (> (count records) 1)
        (map

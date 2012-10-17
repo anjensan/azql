@@ -57,7 +57,7 @@
          [1.12] 1.12
          [nil] nil
          [1 2 3] [1 [[2] 3]]
-         ["str" 1] [(parenthesis [[:x '= "str"] AND [:y '<> 1]])]
+         ["str" 1] [(parentheses [[:x '= "str"] AND [:y '<> 1]])]
          [[1 2 3] 4] [:x (with-meta [1 2 3] {:batch true}) :y 4]))
 
   (testing "test sql generation and formating"
@@ -74,12 +74,12 @@
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 
 (deftest test-helpers
-  (is (= "((?) = (?))" (:sql (sql* (parenthesis [(parenthesis 1) '= (parenthesis 2)])))))
-  (is (= "? + ?" (:sql (sql* (remove-parenthesis (parenthesis [1 '+ 2]))))))
+  (is (= "((?) = (?))" (:sql (sql* (parentheses [(parentheses 1) '= (parentheses 2)])))))
+  (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses [1 '+ 2]))))))
   (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
-  (is (= "?, ?" (:sql (sql* (comma-list [(parenthesis 1) 2])))))
-  (is (= 123 (remove-parenthesis (parenthesis 123))))
-  (is (= 123 (remove-parenthesis 123))))
+  (is (= "?, ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
+  (is (= 123 (remove-parentheses (parentheses 123))))
+  (is (= 123 (remove-parentheses 123))))
 
 (deftest test-surrogate-aliases
   (is (surrogate-alias? (generate-surrogate-alias)))

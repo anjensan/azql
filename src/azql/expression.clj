@@ -18,8 +18,8 @@
   (assoc q :fields {(as-alias-safe f) f}))
 
 (defn- par
-  ([a] (parenthesis a))
-  ([a & r] (parenthesis (cons a r))))
+  ([a] (parentheses a))
+  ([a & r] (parentheses (cons a r))))
 
 (def ^String like-pattern-escaping-char "\\")
 
@@ -43,9 +43,9 @@
 
 (defndialect render-generic-operator
   "Render generic infix operator."
-  ([f x] (parenthesis [(raw (name f)) x]))
+  ([f x] (parentheses [(raw (name f)) x]))
   ([f x & r]
-     (parenthesis
+     (parentheses
       (interpose (raw (name f)) (cons x r)))))
 
 (defndialect render-generic-function
@@ -217,18 +217,18 @@
   [a b]
   (cond
    (empty? b) (render-true)
-   (map? b) (par a NOT_IN (parenthesis b))
-   :else (par a NOT_IN (parenthesis (comma-list b)))))
+   (map? b) (par a NOT_IN (parentheses b))
+   :else (par a NOT_IN (parentheses (comma-list b)))))
 
 (defoperator in?
   [a b]
   (cond
    (empty? b) (render-false)
-   (map? b) (par a IN (parenthesis b))
-   :else (par a IN (parenthesis (comma-list b)))))
+   (map? b) (par a IN (parentheses b))
+   :else (par a IN (parentheses (comma-list b)))))
 
 (defoperator count
-  ([r] [COUNT NOSP (parenthesis r)])
+  ([r] [COUNT NOSP (parentheses r)])
   ([d r]
      (case d
        :distinct [COUNT (par DISTINCT r)]
