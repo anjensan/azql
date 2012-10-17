@@ -17,9 +17,12 @@
     (is (= [:a :b :c] (parse-qname :a.b.c))))
 
   (testing "emit qnames"
-    (is (= "\"A\".\"B\"" (emit-qname :A.B)))
-    (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
-    (is (= "\"Abc\"" (emit-qname :Abc))))
+    (is (= "A.B" (emit-qname :A.B)))
+    (is (= "A.b.C") (emit-qname :A.b.C))
+    (with-dialect-namind-strategy
+      (is (= "\"A\".\"B\"" (emit-qname :A.B)))
+      (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
+      (is (= "\"Abc\"" (emit-qname :Abc)))))
 
   (testing "parse qualifier"
     (is (nil? (qualifier :a)))
@@ -34,10 +37,10 @@
 
   (testing "default implementations of SqlLike"
     (are [s z] (= s (:sql (as-sql z)))
-         "\"keyword\"" :keyword
+         "keyword" :keyword
          "symbol" 'symbol
          " A~,~B " (symbol " A~,~B ")
-         "\"a ~ b,c\"" (keyword "a ~ b,c")
+         "a ~ b,c" (keyword "a ~ b,c")
          "?" 1
          "?" "string"
          "?" nil
@@ -59,7 +62,7 @@
 
   (testing "test sql generation and formating"
     (are [sa z] (= (map->Sql sa) (sql* z))
-         {:sql "SELECT * FROM \"Table\"" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
+         {:sql "SELECT * FROM Table" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
          {:sql "A  a B C D" :args nil} [[[(raw "A  a")] [(raw "B")]] [[[]]] [(raw "C")] (raw "D")]
          {:sql "A ( () )  ,  BC" :args nil} (raw "A ( () )  ,  BC")
          {:sql "A B" :args nil}  [NONE NONE (raw "A") NONE NONE NONE NONE (raw "B") NONE NONE]

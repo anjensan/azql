@@ -53,18 +53,19 @@
 (defmacro select
   "Creates new select."
   [a & body]
-  (emit-threaded-expression select*
-                            (list* (if (list? a) a `(fields ~a)) body)))
+  (emit-threaded-expression
+    select*
+    (list* (if (list? a) a `(fields ~a)) body)))
 
 (defn table
   "Select all records from table."
   [tname]
-  (vary-meta (select (from tname)) assoc ::single-table true))
+  (vary-meta (select (from tname)) assoc ::created-by-table-fn true))
 
 (defn- single-table-select?
   [q]
   (when (and
-          (::single-table (meta q))
+          (::created-by-table-fn  (meta q))
           (== 1 (count (:tables q))))
     (let [[a t] (first (:tables q))]
       (and

@@ -1,11 +1,9 @@
 (ns azql.core-test
-  (:use clojure.test [azql emit dialect core]))
+  (:use clojure.test [azql emit dialect core])
+  (:require [clojure.java.jdbc :as jdbc]))
 
-;; custom dialect without quoting
-(register-dialect ::noquote-dialect)
-(defmethod azql.emit/naming-strategy ::noquote-dialect [] identity)
-
-(use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::noquote-dialect] (f))))
+;; disable quoting
+(use-fixtures :once (fn [f] (with-bindings* {#'jdbc/*as-str* identity} f)))
 
 (deftest test-simple-queries
   (testing "simple selects from one table"

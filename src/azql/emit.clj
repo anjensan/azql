@@ -4,22 +4,24 @@
   (:use clojure.template)
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def ^:dynamic *dialect-naming-strategy-installed* false)
+(def ^:dynamic ^:private dialect-naming-strategy-installed false)
 
-(defndialect naming-strategy
-  "Returns naming strategy for clojure/jdbc."
+(defndialect entity-naming-strategy
+  "Returns entity naming strategy for clojure/jdbc."
   []
-  {:entity (fn [x] (str \" x \"))
-   :keyword s/lower-case})
+  (fn [x] (str \" x \")))
 
 (defmacro with-dialect-namind-strategy
   "Registers register AZQL naming strategy in `clojure/jdbc.`"
   [& body]
-  `(let [f# (fn [] ~@body)]
-     (if *dialect-naming-strategy-installed*
-       (f#)
-       (binding [*dialect-naming-strategy-installed* true]
-         (jdbc/with-naming-strategy (naming-strategy) (f#))))))
+  `(with-dialect-namind-strategy* (fn [] ~@body)))
+
+(defn with-dialect-namind-strategy*
+  "Registers register AZQL naming strategy in `clojure/jdbc.`"
+  [f]
+  (if (thread-bound? #'jdbc/*as-str*)
+    (f)
+    (with-bindings* {#'jdbc/*as-str* (entity-naming-strategy)} f)))
 
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'."))
@@ -63,17 +65,17 @@
         (first n)))))
 
 (defn quote-name
-  "Quotes name. Doesn't split on '.'."
+  "Quotes name. Uses current jdbc naming strategy."
   [s]
-  (with-dialect-namind-strategy
-    (let [s (str s)]
-      (if (= s "*") s (#'jdbc/*as-str* s)))))
+  (let [s (str s)]
+    (if (= s "*") s (#'jdbc/*as-str* s))))
 
 (defn emit-qname
-  "Parses and escapes qualified name. Ex :a.val => \"a\".\"val\"."
+  "Parses and escapes qualified name.
+   Uses current jdbc naming strategy.
+   Ex :a.val => \"a\".\"val\"."
   [qname]
-  (with-dialect-namind-strategy
-    (jdbc/as-str quote-name qname)))
+  (jdbc/as-str quote-name qname))
 
 (defn qname
   "Constructs qualified name."
@@ -118,8 +120,9 @@
   (as-sql [this] (arg nil)))
 
 (defn sql*
-  "Converts object to Sql. Doesn't install azql context.
-   You should prefer azql.core/sql."
+  "Converts object to Sql.
+   For internal usag, prefer azql.core/sql.
+   Warning: this functions doesn't escape keywords."
   ([] NONE)
   ([v] (if (sql? v) v (as-sql v)))
   ([v & r] (as-sql (cons v r))))
