@@ -9,7 +9,7 @@
    All public functions automatically call this macro."
   [& body]
   `(-> (do ~@body)
-     with-dialect-namind-strategy
+     with-dialect-naming-strategy
      with-recognized-dialect
      with-global-connection))
 

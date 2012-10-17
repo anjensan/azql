@@ -11,12 +11,12 @@
   []
   (fn [x] (str \" x \")))
 
-(defmacro with-dialect-namind-strategy
+(defmacro with-dialect-naming-strategy
   "Registers register AZQL naming strategy in `clojure/jdbc.`"
   [& body]
-  `(with-dialect-namind-strategy* (fn [] ~@body)))
+  `(with-dialect-naming-strategy* (fn [] ~@body)))
 
-(defn with-dialect-namind-strategy*
+(defn with-dialect-naming-strategy*
   "Registers register AZQL naming strategy in `clojure/jdbc.`"
   [f]
   (if (thread-bound? #'jdbc/*as-str*)

@@ -19,7 +19,7 @@
   (testing "emit qnames"
     (is (= "A.B" (emit-qname :A.B)))
     (is (= "A.b.C") (emit-qname :A.b.C))
-    (with-dialect-namind-strategy
+    (with-dialect-naming-strategy
       (is (= "\"A\".\"B\"" (emit-qname :A.B)))
       (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
       (is (= "\"Abc\"" (emit-qname :Abc)))))
