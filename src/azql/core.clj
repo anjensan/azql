@@ -1,5 +1,5 @@
 (ns azql.core
-  (:use [azql util emit expression render connection dialect])
+  (:use [azql util dialect connection emit expression render])
   (:use clojure.template)
   (:require [clojure.string :as s])
   (:require [clojure.java.jdbc :as jdbc]))

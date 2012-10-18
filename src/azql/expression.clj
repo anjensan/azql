@@ -1,5 +1,5 @@
 (ns azql.expression
-  (:use [azql util emit dialect]))
+  (:use [azql util dialect emit]))
 
 (defndialect expression-synonym
   [s]

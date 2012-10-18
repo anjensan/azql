@@ -1,7 +1,7 @@
 (ns azql.emit
   (:use [azql util dialect])
-  (:require [clojure.string :as s])
   (:use clojure.template)
+  (:require [clojure.string :as s])
   (:require [clojure.java.jdbc :as jdbc]))
 
 (def ^:dynamic ^:private dialect-naming-strategy-installed false)

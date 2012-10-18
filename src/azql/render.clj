@@ -1,5 +1,5 @@
 (ns azql.render
-  (:use [azql util emit expression dialect])
+  (:use [azql util dialect emit expression])
   (:require [clojure.set :as cset])
   (:require [clojure.java.jdbc :as jdbc]))
 
