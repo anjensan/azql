@@ -308,16 +308,18 @@
 
 (defn insert*
   "Creates new insert statement."
-  ([table] (->Insert table nil []))
+  ([table] (->Insert (unwrap-single-table table) nil []))
   ([table records] (values (insert* table) records)))
 
 (defn update*
-  "Creates new update statement"
-  ([table] (update* table table))
+  "Creates new update statement."
+  ([table]
+    (let [t (unwrap-single-table table)]
+      (update* t t)))
   ([alias table] (->Update [alias table] nil nil)))
 
 (defn setf
-  "Adds field to update statement"
+  "Adds field to update statement."
   [query fname value]
   (assoc query :fields (assoc (:fields query) fname value)))
 

@@ -117,7 +117,7 @@
   Object
   (as-sql [this] (arg this))
   nil
-  (as-sql [this] (arg nil)))
+  (as-sql [this] #=(arg nil)))
 
 (defn sql*
   "Converts object to Sql.
