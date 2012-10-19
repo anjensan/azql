@@ -12,16 +12,23 @@
    (string? v) (keyword v)
    :else (parentheses v)))
 
+(defn render-alias?
+  "Checks whether it is necessary to render alias of table/column."
+  [alias table-or-column]
+  (not
+    (or
+      (= alias table-or-column)
+      (surrogate-alias? alias))))
+
 (defndialect render-table
-  [[alias nm]]
-  (let [t (as-table-or-subquery nm)]
-    (if (or (= alias t) (surrogate-alias? alias))
-      t
-      [t AS alias])))
+  [[alias table]]
+  (let [t (as-table-or-subquery table)]
+    (if (render-alias? alias t) [t AS alias] t)))
 
 (defndialect render-field
   [[alias nm]]
-  (if (= alias nm) nm [(render-expression nm) AS alias]))
+  (let [e (render-expression nm)]
+    (if (render-alias? alias nm) [e AS alias] e)))
 
 (defndialect render-fields
   [{:keys [fields tables]}]

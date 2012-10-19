@@ -169,11 +169,13 @@
                   "Invalid alias, extected keyword or string.")
   (keyword n))
 
-(let [sa (atom 0)]
-  (defn generate-surrogate-alias
-    "Generates surrogate alias."
-    []
-    (keyword (str "__" (swap! sa inc)))))
+(def surrogate-alias-counter (atom 0))
+
+(defn generate-surrogate-alias
+  "Generates surrogate alias."
+  []
+  (let [k (swap! surrogate-alias-counter  #(-> % inc (mod 1000000)))]
+    (keyword (format "__%06d" k))))
 
 (defn surrogate-alias?
   "Checks if alias is surrogate."
