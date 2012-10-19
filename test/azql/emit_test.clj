@@ -91,3 +91,11 @@
   (is (= (as-alias-safe :ax) (as-alias-safe :ax)))
   (is (thrown? IllegalArgumentException (as-alias-safe [1])))
   (is (keyword? (as-alias [1]))))
+
+(deftest test-format-sql
+  (is (= "? = x" (:sql (format-sql ":x = x" {:x 1 :y 2}))))
+  (is (= [2 1] (:args (format-sql ":y = :x" {:x 1 :y 2}))))
+  (is (= ">?<" (:sql (format-sql ">:x<" {:x 1 :y 2}))))
+  (is (= "???" (:sql (format-sql ":x:y:z" {:x 1 :y 2 :z 3}))))
+  (is (thrown? IllegalArgumentException
+               (format-sql ":z = :x" {:x 1 :y 2}))))

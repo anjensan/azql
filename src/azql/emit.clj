@@ -147,6 +147,9 @@
  LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
  PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
 
+
+; misc
+
 (defn parentheses
   "Surrounds token with parentheses."
   [e]
@@ -213,3 +216,26 @@
       (fn [s a]
         (s/replace-first s #"\?" (format-interpolated-sql-arg a)))
       ss as)))
+
+(defn- parse-placeholders
+  [query]
+  (map
+    (comp keyword second)
+    (re-seq #":([\w.-]+)" query)))
+
+(defn- replace-placeholders-with-mark
+  [query]
+  (s/replace query #":[\w.-]+" "?"))
+
+(defn format-sql
+  "Formats a raw sql qeury (string).
+   Replaces all keyword-like placeholders with '?'.
+   Args should be a map."
+  [raw-sql args]
+  (let [al (parse-placeholders raw-sql)
+        pq (replace-placeholders-with-mark raw-sql)
+        akeys (set (keys args))]
+    (when-let [ma (seq (remove akeys al))]
+      (illegal-argument
+        (str "Unknown arguments " (vec ma) " in sql.")))
+    (->Sql pq (map args al))))
