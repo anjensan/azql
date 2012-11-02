@@ -14,7 +14,7 @@
      with-global-connection))
 
 (defn sql
-  "Converts object to Sql."
+  "Converts object to Sql. Requires jdbc-coneection."
   ([& args]
     (with-azql-context
       (apply sql* args))))
@@ -64,7 +64,7 @@
     (list* (if (list? a) a `(fields ~a)) body)))
 
 (defn table
-  "Select all records from table."
+  "Select all records from a table."
   [tname]
   (vary-meta (select (from tname)) assoc ::created-by-table-fn true))
 

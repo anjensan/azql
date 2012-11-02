@@ -46,20 +46,21 @@ Actual work is doing in `fetch-all` - this function executes query
 and converts `resultset-seq` into vector.
 
 Library provides some alternatives:
-- `fetch-one` feches only one record, raises exception if more than one recerd is returened.
+
+- `fetch-one` feches only one record, raises exception if more than one record is returened.
 - `fetch-single` fetches only single value (one row and one column), useful for aggregate queries
 - `with-fetch` executes arbitary code with opened `resultset-seq`
 
 Example:
 
 	:::clojure
-	(with-fetch [f (select (from :Users))]
+	(with-fetch [f (table :Users)]
 	  (reduce + (map :rating f)))
 
 It is possible to compose additional where's:
 
 	:::clojure
-	(def all-users (select (from :Users)))
+	(def all-users (table :Users))
 	(def banned-users (-> all-users (where (= :status "BANNED"))))
 	(def banned-admins (-> banned-users (where (= :role "ADMIN")))
 	(println (fetch-all banned-admins))
@@ -158,6 +159,14 @@ Delete:
 	:::clojure
 	(delete! :table (where (= :id 1)))
 
+
+## Custom dialects
+
+TODO
+
+## Raw queries
+
+TODO
 
 ## License
 
