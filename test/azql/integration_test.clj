@@ -119,10 +119,10 @@
          (select [:name] (from :users) (where (like? :name "%turas")) (fetch-single))))
     (is (=
          "Arturas"
-         (select [:name] (from :users) (where (begins? :name "Artur")) (fetch-single))))
+         (select [:name] (from :users) (where (starts? :name "Artur")) (fetch-single))))
     (is
      (nil?
-      (select (from :users) (where (begins? :name "Artur%")) (fetch-one))))))
+      (select (from :users) (where (starts? :name "Artur%")) (fetch-one))))))
 
 (deftest test-multi-value-expressions
   (testing "test 'in' operator"

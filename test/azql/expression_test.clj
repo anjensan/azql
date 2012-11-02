@@ -59,10 +59,10 @@
     (are [a b] (= a (:sql (sql* (render-expression b))))
          "(? LIKE ? ESCAPE '\\')" ['like? "a" "b"]
          "(x LIKE y ESCAPE '\\')" ['like? :x :y]
-         "(x LIKE ? ESCAPE '\\')" ['begins? :x "abc"]))
-  (testing "test 'begins?' alias"
+         "(x LIKE ? ESCAPE '\\')" ['starts? :x "abc"]))
+  (testing "test 'starts?' alias"
     (is
-     (= ["x" "abc%"] (:args (sql* (render-expression ['begins? "x" "abc"])))))))
+     (= ["x" "abc%"] (:args (sql* (render-expression ['starts? "x" "abc"])))))))
 
 (deftest test-dialects-specific-op
   (testing "dialect-specific operation"

@@ -275,7 +275,7 @@
   [a b]
   (par a LIKE b ESCAPE (like-pattern-escaping-sql)))
 
-(defoperator begins?
+(defoperator starts?
   [a b]
   (check-argument (string? b) "Pattern should be string.")
   (par a LIKE (str (escape-like-pattern b) "%")
