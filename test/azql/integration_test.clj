@@ -35,7 +35,7 @@
    :users
    [1 "Artyom" #inst"1980-01-21"]
    [2 "Anton" #inst"1981-02-22"]
-   [3 "Arturas" #inst "1982-03-23"])
+   [3 "Arturas" #inst"1982-03-23"])
   (jdbc/insert-rows
    :posts
    [1 "first post" 1]

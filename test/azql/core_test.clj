@@ -62,6 +62,7 @@
           (from "Table1")
           (where (and (= :id 10) (not= 2 :fi)))
           (where (= :email "x@example.com")))))
+
   (testing "where with aliases"
     (are [s z] (= s (:sql (sql*  z)))
          "SELECT * FROM A AS a, B AS b WHERE (a.x = b.y)"

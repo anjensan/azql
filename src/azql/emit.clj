@@ -198,14 +198,14 @@
 (defn- format-interpolated-sql-arg
   [a]
   (cond
-    (string? a) (str \' (s/replace a #"'" "''") \')
-    (sequential? a) (str "["
-                         (s/join
-                           " "
-                           (map format-interpolated-sql-arg a))
-                         "]")
-    (nil? a) "NULL"
-    :else (str a)))
+    (string? a)
+    (str \' (s/replace a #"'" "''") \'),
+    (sequential? a)
+    (str "[" (s/join " " (map format-interpolated-sql-arg a)) "]"),
+    (nil? a)
+    "NULL",
+    :else
+    (str a)))
 
 (defn ^String interpolate-sql
   "Replaces placeholders with actual values.

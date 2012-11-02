@@ -130,7 +130,7 @@
       (into {} (map (juxt aa prepare-macro-expression) fs)))))
 
 (defmacro fields
-  "Adds field list to query, support macro expressions."
+  "Adds field list to query, support expressions."
   [s fd]
   `(fields* ~s ~(prepare-fields fd)))
 
@@ -140,7 +140,7 @@
   (assoc s :where (conj-expression w c)))
 
 (defmacro where
-  "Adds 'where' condition to query, support macro expressions."
+  "Adds 'where' condition to query, support expressions."
   [s c]
   `(where* ~s ~(prepare-macro-expression c)))
 

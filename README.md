@@ -47,8 +47,8 @@ and converts `resultset-seq` into vector.
 
 Library provides some alternatives:
 
-- `fetch-one` feches only one record, raises exception if more than one record is returened.
-- `fetch-single` fetches only single value (one row and one column), useful for aggregate queries
+- `fetch-one` feches only one record, raises exception if more than one record is returened
+- `fetch-single` fetches only single value (one row and one column)
 - `with-fetch` executes arbitary code with opened `resultset-seq`
 
 Example:
@@ -160,15 +160,17 @@ Delete:
 	(delete! :table (where (= :id 1)))
 
 
-## Custom dialects
+### Custom dialects
 
 TODO
 
-## Raw queries
+
+### Raw queries
 
 TODO
 
-## License
+
+### License
 
 Copyright © 2012 Andrei Zhlobich
 
