@@ -145,7 +145,8 @@
  LEFT_PAREN "(", RIGHT_PAREN ")",
  EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
  LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
- PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*")
+ PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*",
+ STR_CONCAT "||")
 
 
 ; misc

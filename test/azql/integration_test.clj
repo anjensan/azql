@@ -112,6 +112,18 @@
   (testing "get posts without parent"
     (is (= 5 (select (from :comments) (where (= :parentid nil)) (fetch-all) (count))))))
 
+
+(deftest test-operators
+
+  (testing "string concatenation"
+    (is (=
+         "2-x-Anton"
+         (select
+           (from :users)
+           (fields [(str :id "-x-" :name)])
+           (where (= :id 2))
+           (fetch-single))))))
+
 (deftest test-like-operator
   (testing "test like operator"
     (is (=

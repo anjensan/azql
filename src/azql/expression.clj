@@ -3,7 +3,7 @@
 
 (defndialect expression-synonym
   [s]
-  (get {'<> 'not=, '== '=} s s))
+  (get '{<> not=, == =, || str} s s))
 
 (def subquery-operators
   '#{some any all exists? not-exists? in? not-in? raw})
@@ -279,3 +279,6 @@
   (check-argument (string? b) "Pattern should be string.")
   (par a LIKE (str (escape-like-pattern b) "%")
    ESCAPE (like-pattern-escaping-sql)))
+
+(defoperator str
+  [x & r] (par (interpose STR_CONCAT (cons x r))))
