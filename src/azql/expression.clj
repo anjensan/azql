@@ -41,13 +41,6 @@
   (let [fch (char (get (name f) 0))]
     (not (Character/isLetterOrDigit fch))))
 
-(defndialect render-generic-operator
-  "Render generic infix operator."
-  ([f x] (parentheses [(raw (name f)) x]))
-  ([f x & r]
-     (parentheses
-      (interpose (raw (name f)) (cons x r)))))
-
 (defndialect render-generic-function
   "Renders generic function."
   ([f] [(raw (name f)) NOSP (raw "()")])
@@ -116,9 +109,7 @@
   [s & r]
   (if-let [f (operator-rendering-fns s)]
     (apply f r)
-    (if (operator? s)
-      (apply render-generic-operator s r)
-      (apply render-generic-function s r))))
+    (apply render-generic-function s r)))
 
 (defn render-expression
   "Convert expression tree (recursively) to sql'like object."

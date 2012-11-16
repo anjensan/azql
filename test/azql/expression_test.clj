@@ -18,7 +18,6 @@
          ["funfun()" nil] '(funfun)
          ["funfun(?)" [1]] '(funfun 1)
          ["my-fun(? + ?, ?, fun(), ffun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
-         ["myfun*(? <xx> ?)" [1 2]] '(myfun* (<xx> 1 2))
          ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
          ["(? || ? || ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
 
