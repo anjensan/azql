@@ -71,21 +71,20 @@
     (let [f (canonize-operator-symbol (first e))]
       (when-not f
         (illegal-argument "Invalid expression '" e "', unknown operator."))
-      (vec
-       (cons
-        `(quote ~f)
-        (if (contains? subquery-operators f)
-          (rest e)
-          (map prepare-macro-expression (rest e))))))
+      `(list
+         (quote ~f)
+         ~@(if (contains? subquery-operators f)
+             (rest e)
+             (map prepare-macro-expression (rest e)))))
     e))
 
 (defn conj-expression
   "Concatenates two logical expressions with 'AND'."
   [expr e]
   (cond
-   (not (seq expr)) e
-   (= 'and (first expr)) (conj (vec expr) e)
-   :else (list 'and expr e)))
+    (not (seq expr)) e
+    (= 'and (first expr)) (conj (vec expr) e)
+    :else (vector 'and expr e)))
 
 (def operator-rendering-fns {})
 
