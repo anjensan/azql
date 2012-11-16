@@ -3,7 +3,7 @@
 
 (defndialect expression-synonym
   [s]
-  (get {'not= '<>, '== '=} s s))
+  (get {'<> 'not=, '== '=} s s))
 
 (def subquery-operators
   '#{some any all exists? not-exists? in? not-in? raw})
@@ -161,7 +161,7 @@
     (nil? b) [a IS_NULL]
     :else [a EQUALS b])))
 
-(defoperator <>
+(defoperator not=
   [a b]
   (par
    (cond

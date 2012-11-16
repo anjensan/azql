@@ -30,7 +30,8 @@
          '[+ 1 2] '(+ 1 2)
          '[and [+ 1 2 3] :b] '(and (+ 1 2 3) :b)
          '[/ 10 2] '(/ 10 2)
-         '[<> 1 2] '(not= 1 2)
+         '[not= 1 2] '(not= 1 2)
+         '[not= 1 2] '(<> 1 2)
          '[or [> 1 2] [< 1 2] [>= 1 2]] '(or (> 1 2) (< 1 2) (>= 1 2))
          '[not [nil? :x]] '(not (nil? :x))
          '[sin 1] '(sin 1)
@@ -41,10 +42,10 @@
     (are [a b] (= (str \( a \)) (:sql (sql* (render-expression b))))
          "x IS NULL" ['= nil :x]
          "y IS NULL" ['= :y nil]
-         "x IS NOT NULL" ['<> nil :x]
-         "y IS NOT NULL" ['<> :y nil]
+         "x IS NOT NULL" ['not= nil :x]
+         "y IS NOT NULL" ['not= :y nil]
          "? IS NULL" ['= nil nil]
-         "? IS NOT NULL" ['<> nil nil])))
+         "? IS NOT NULL" ['not= nil nil])))
 
 (deftest test-conj-boolean-expressions
   (testing "conj two expressions"
