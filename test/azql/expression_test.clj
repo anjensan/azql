@@ -2,6 +2,12 @@
   (:use [azql expression emit dialect])
   (:use clojure.test))
 
+;; custom dialect
+(register-dialect ::dialect)
+(deffunctions ::dialect fun sin funn)
+(deffunctions ::dialect {funfun f} sin cos sqrt {ffun fun} my-fun)
+(use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::dialect] (f))))
+
 (deftest test-render-expression
   (testing "test rendering of expressions"
     (is (= #azql.emit.Sql["((? > ?) AND (? < ?))" [1 2 3 4]]
@@ -15,9 +21,9 @@
 
   (testing "test generic functions and operators"
     (are [a b] (= (apply ->Sql a) (sql* (render-expression b)))
-         ["funfun()" nil] '(funfun)
-         ["funfun(?)" [1]] '(funfun 1)
-         ["my-fun(? + ?, ?, fun(), ffun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
+         ["f()" nil] '(funfun)
+         ["f(?)" [1]] '(funfun 1)
+         ["my-fun(? + ?, ?, fun(), fun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
          ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
          ["(? || ? || ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
 
@@ -66,6 +72,13 @@
 (deftest test-dialects-specific-op
   (testing "dialect-specific operation"
      (defoperator myfun [] :myfun-default)
-     (defoperator myfun ::dialect [] :myfun-dialect)
+     (defoperator myfun ::custom-dialect [] :myfun-dialect)
+     (deffunctions ::custom-dialect [f1] f2 {f3 Fx3})
      (is (= :myfun-default (render-operator 'myfun)))
-     (is (= :myfun-dialect (binding [*dialect* ::dialect] (render-operator 'myfun))))))
+     (is (= :myfun-dialect (binding [*dialect* ::custom-dialect]
+                             (render-operator 'myfun))))
+     (are [a b] (= a (:sql (sql* (binding [*dialect* ::custom-dialect]
+                                   (render-expression b)))))
+          "f1()" ['f1]
+          "f2(?)" ['f2 1]
+          "Fx3()" ['f3])))

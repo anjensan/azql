@@ -2,6 +2,7 @@
   (:use [azql util dialect emit]))
 
 (defndialect expression-synonym
+  "Replace synonym with proper function/operator name."
   [s]
   (get '{<> not=, == =, || str} s s))
 
@@ -21,7 +22,7 @@
   ([a] (parentheses a))
   ([a & r] (parentheses (cons a r))))
 
-(def ^String like-pattern-escaping-char "\\")
+(def ^:private ^:const like-pattern-escaping-char "\\")
 
 (defndialect like-pattern-escaping-sql
   []
@@ -31,24 +32,22 @@
   "Escapes all '%' and '_' characters with '\\'."
   [^String a]
   (.. a
-      (replace like-pattern-escaping-char
-               (str like-pattern-escaping-char like-pattern-escaping-char))
-      (replace "%" (str like-pattern-escaping-char "%"))
-      (replace "_" (str like-pattern-escaping-char "_"))))
+    (replace
+      like-pattern-escaping-char
+      (str like-pattern-escaping-char like-pattern-escaping-char))
+    (replace "%" (str like-pattern-escaping-char "%"))
+    (replace "_" (str like-pattern-escaping-char "_"))))
 
-(defn- operator?
-  [f]
-  (let [fch (char (get (name f) 0))]
-    (not (Character/isLetterOrDigit fch))))
-
-(defndialect render-generic-function
-  "Renders generic function."
-  ([f] [(raw (name f)) NOSP (raw "()")])
-  ([f & r]
-    [(raw (name f))
-     NOSP LEFT_PAREN NOSP
-     (comma-list r)
-     NOSP RIGHT_PAREN]))
+(defn render-function
+  "Renders function."
+  ([fname]
+    [(raw (name fname))
+     NOSP
+     (raw "()")])
+  ([fname & args]
+    [(raw (name fname))
+     NOSP
+     (parentheses (comma-list args))]))
 
 (defn- canonize-operator-symbol
   [s]
@@ -89,7 +88,7 @@
     :default
     #'dialects-hierarchy))
 
-(defn add-operator
+(defn register-operator
   "Register new operator."
   ([op dialect f]
     (alter-var-root
@@ -102,14 +101,14 @@
           (.addMethod m dialect f)
           (assoc mp op m)))))
   ([op f]
-    (add-operator op :default f)))
+    (register-operator op :default f)))
 
 (defn render-operator
   "Renders one function. First argument is a function symbol. Rest is args."
   [s & r]
   (if-let [f (operator-rendering-fns s)]
     (apply f r)
-    (apply render-generic-function s r)))
+    (illegal-argument "Unknown operator/function '" s "'")))
 
 (defn render-expression
   "Convert expression tree (recursively) to sql'like object."
@@ -130,7 +129,34 @@
         [d & r] (if (keyword? (first args-and-body))
                 args-and-body
                 (cons default-dialect args-and-body))]
-    `(add-operator (quote ~s) ~d (fn ~fn-name ~@r))))
+    `(register-operator (quote ~s) ~d (fn ~fn-name ~@r))))
+
+(defn- emit-deffunction
+  [dialect [fname fsql]]
+  `(defoperator ~fname ~dialect [& a#]
+     (apply render-function (quote ~fsql) a#)))
+
+(defn- as-function-name-and-sql-name
+  [v]
+  (cond
+    (symbol? v) [[v v]]
+    (sequential? v) (map vector v v)
+    (map? v) (seq v)
+    :else (illegal-argument "Invalid function name '" v "'.")))
+
+(defmacro deffunctions
+  "Defines functions for dialect.
+   Functions can be specified by sequence of symbols
+   or as map {canon-name -> dialect-name}."
+  [dialect & body]
+  (let [[dialect body]
+        (if (keyword? dialect)
+          [dialect body]
+          [default-dialect (cons dialect body)])
+        fs (mapcat as-function-name-and-sql-name body)]
+    (list*
+      `do
+      (map (partial emit-deffunction dialect) fs))))
 
 (defoperator raw
   [s]

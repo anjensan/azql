@@ -1,9 +1,14 @@
 (ns azql.core-test
-  (:use clojure.test [azql emit dialect core])
+  (:use clojure.test [azql emit dialect expression core])
   (:require [clojure.java.jdbc :as jdbc]))
 
 ;; disable quoting
 (use-fixtures :once (fn [f] (with-bindings* {#'jdbc/*as-str* identity} f)))
+
+;; custom dialect
+(register-dialect ::dialect)
+(deffunctions ::dialect fun sin cos)
+(use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::dialect] (f))))
 
 (deftest test-simple-queries
   (testing "simple selects from one table"
@@ -73,6 +78,7 @@
 
 (deftest test-complex-fields
   (testing "select expression"
+    (deffunctions sin)
     (are [s z] (= s (:sql (sql* z)))
          "SELECT (a + b) AS c FROM Table"
          (select (from "Table") (fields {:c (+ :a :b)}))
