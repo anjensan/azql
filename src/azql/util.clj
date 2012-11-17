@@ -30,11 +30,11 @@
   [v]
   `(let [v# ~v] (or (keyword? v#) (string? v#))))
 
-(defn illegal-argument [& msg]
-  (throw (IllegalArgumentException. (s/join msg))))
+(defmacro illegal-argument [& msg]
+  `(throw (IllegalArgumentException. (str ~@msg))))
 
-(defn illegal-state [& msg]
-  (throw (IllegalStateException. (s/join msg))))
+(defmacro illegal-state [& msg]
+  `(throw (IllegalStateException. (str ~@msg))))
 
 (defmacro check-argument
   [c msg]
