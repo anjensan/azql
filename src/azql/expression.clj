@@ -58,19 +58,26 @@
 (defn register-subquery-symbol
   [s]
   "Adds symbol to `subquery-symbols`."
+  (assert (not (namespace s)))
   (alter-var-root #'subquery-symbols conj (symbol s)))
 
 (defn subquery-form?
   "Checks is form is 'subquery'."
   [form]
-  (contains? subquery-symbols (first form)))
+  (when (seq? form)
+    (let [f (first form)]
+      (and
+        (not (namespace f))
+        (contains? subquery-symbols (first form))))))
 
 (defn prepare-macro-expression
   "Walks tree and replaces synonyms.
    Skips all symbols from `subquery-symbols` set.
    Ex: (+ 1 (/ :x :y)) => ['+ 1 ['divide :x :y]]"
   [e]
-  (if (and (list? e) (not (subquery-form? e)))
+  (if (and
+        (list? e)
+        (not (subquery-form? e)))
     (let [f (canonize-operator-symbol (first e))]
       (when-not f
         (illegal-argument "Invalid expression '" e "', unknown operator."))

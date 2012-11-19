@@ -75,7 +75,7 @@ The actual SQL is available trough the function `sql`:
 ### Joins
 
 AZQL supports all types of joins:
-	
+
 	:::clojure
 	(select
 	  (from :a :A)                      ; table 'A', alias 'a', implicit cross join
@@ -129,6 +129,33 @@ Library supports subqueries:
 	(def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
 	(fetch-all all-active-users)
 
+
+ALL, ANY and SOME are supported also.
+
+	:::clojure
+	(select
+	  (from :u :Users)
+	  (where (= :u.id (any (select [:id] (from :ActiveUsers)))))
+
+Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select'.
+So, you must use 'select' in you subqueries or pass them as a value. Example:
+
+	:::clojure
+	(let [sq (fields [:id] (table :ActiveUsers))]
+	  (select
+	    (from :u :Users)
+	    (where (= :u.id (any sq)))))
+
+### Limit and offest
+
+	Library supports limiting of results (with offset):
+
+	:::clojure
+	(select
+	  (from :u :Users)
+	  (where (like? :name "%Andrei%"))
+	  (limit 100)
+	  (offset 25))
 
 ### CRUD
 
