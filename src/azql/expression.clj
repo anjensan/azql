@@ -1,13 +1,11 @@
 (ns azql.expression
   (:use [azql util dialect emit]))
 
-(defndialect expression-synonym
-  "Replace synonym with proper function/operator name."
+(defn expression-synonym
+  "Replace synonym with proper function/operator name.
+   This function know nothing about dialects."
   [s]
   (get '{<> not=, == =, || str} s s))
-
-(def subquery-operators
-  '#{some any all exists? not-exists? in? not-in? raw})
 
 (defndialect render-true [] (raw "(0=0)"))
 (defndialect render-false [] (raw "(0=1)"))
@@ -39,7 +37,7 @@
     (replace "_" (str like-pattern-escaping-char "_"))))
 
 (defn render-function
-  "Renders function."
+  "Renders function (with or without arguments)."
   ([fname]
     [(raw (name fname))
      NOSP
@@ -47,7 +45,7 @@
   ([fname & args]
     [(raw (name fname))
      NOSP
-     (parentheses (comma-list args))]))
+     (par (comma-list args))]))
 
 (defn- canonize-operator-symbol
   [s]
@@ -55,19 +53,30 @@
     (illegal-argument "Illegal function name '" s "', extected symbol"))
   (expression-synonym s))
 
+(def ^:private subquery-symbols #{})
+
+(defn register-subquery-symbol
+  [s]
+  "Adds symbol to `subquery-symbols`."
+  (alter-var-root #'subquery-symbols conj (symbol s)))
+
+(defn subquery-form?
+  "Checks is form is 'subquery'."
+  [form]
+  (contains? subquery-symbols (first form)))
+
 (defn prepare-macro-expression
-  "Walk tree and replace synonyms.
+  "Walks tree and replaces synonyms.
+   Skips all symbols from `subquery-symbols` set.
    Ex: (+ 1 (/ :x :y)) => ['+ 1 ['divide :x :y]]"
   [e]
-  (if (list? e)
+  (if (and (list? e) (not (subquery-form? e)))
     (let [f (canonize-operator-symbol (first e))]
       (when-not f
         (illegal-argument "Invalid expression '" e "', unknown operator."))
       `(list
          (quote ~f)
-         ~@(if (contains? subquery-operators f)
-             (rest e)
-             (map prepare-macro-expression (rest e)))))
+         ~@(map prepare-macro-expression (rest e))))
     e))
 
 (defn conj-expression
@@ -78,7 +87,7 @@
     (= 'and (first expr)) (conj (vec expr) e)
     :else (vector 'and expr e)))
 
-(def operator-rendering-fns {})
+(def ^:private operator-rendering-fns {})
 
 (defn- create-operator-multi
   [s]
@@ -118,8 +127,6 @@
           rs (map render-expression r)]
       (apply render-operator f rs))
     etree))
-
-;; rendering
 
 (defmacro defoperator
   "Defines new operator.
@@ -233,14 +240,14 @@
   [a b]
   (cond
    (empty? b) (render-true)
-   (map? b) (par a NOT_IN (parentheses b))
+   (extends? SqlLike (class b)) (par a NOT_IN (parentheses b))
    :else (par a NOT_IN (parentheses (comma-list b)))))
 
 (defoperator in?
   [a b]
   (cond
    (empty? b) (render-false)
-   (map? b) (par a IN (parentheses b))
+   (extends? SqlLike (class b)) (par a IN (parentheses b))
    :else (par a IN (parentheses (comma-list b)))))
 
 (defoperator count

@@ -63,10 +63,14 @@
     select*
     (list* (if (list? a) a `(fields ~a)) body)))
 
+(register-subquery-symbol 'select)
+
 (defn table
   "Select all records from a table."
   [tname]
   (vary-meta (select (from tname)) assoc ::created-by-table-fn true))
+
+(register-subquery-symbol 'table)
 
 (defn- single-table-select?
   [q]
