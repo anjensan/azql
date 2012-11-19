@@ -65,6 +65,13 @@ It is possible to compose additional where's:
 	(def banned-admins (-> banned-users (where (= :role "ADMIN")))
 	(println (fetch-all banned-admins))
 
+Also you can use map-style conditions.
+
+	:::clojure
+	(select
+	  (from :Users)
+	  (where {:first "Adrei", :last "Zhlobich"}))
+
 The actual SQL is available trough the function `sql`:
 
 	:::clojure

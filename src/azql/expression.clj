@@ -70,13 +70,27 @@
         (not (namespace f))
         (contains? subquery-symbols (first form))))))
 
+(declare conj-expression)
+
+(defn- map-style-expression?
+  [m]
+  (and
+    (map? m)
+    (not (extends? SqlLike (class m)))))
+
+(defn- normalize-map-style-expression
+  [m]
+  (if (empty? m)
+    (render-true)
+    (reduce conj-expression (map #(list* '= %) m))))
+
 (defn prepare-macro-expression
   "Walks tree and replaces synonyms.
    Skips all symbols from `subquery-symbols` set.
    Ex: (+ 1 (/ :x :y)) => ['+ 1 ['divide :x :y]]"
   [e]
   (if (and
-        (list? e)
+        (seq? e)
         (not (subquery-form? e)))
     (let [f (canonize-operator-symbol (first e))]
       (when-not f
@@ -84,7 +98,10 @@
       `(list
          (quote ~f)
          ~@(map prepare-macro-expression (rest e))))
-    e))
+    (if (map-style-expression? e)
+      (prepare-macro-expression
+        (normalize-map-style-expression e))
+      e)))
 
 (defn conj-expression
   "Concatenates two logical expressions with 'AND'."
