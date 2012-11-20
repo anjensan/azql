@@ -132,17 +132,6 @@
   (withMeta [this m] (ComposedSql. sqls m))
   (meta [this] (.-meta this)))
 
-(def ^:dynamic composed-sql-print-ident 0)
-
-(defmethod print-method ComposedSql [^ComposedSql cs ^Appendable w]
-  (let [sqls (.sqls cs)]
-    (.append w "#<[")
-    (doseq [s sqls]
-      (.append w \space)
-      (print-method s w)
-      (.append w \space))
-    (.append w "]>")))
-
 (defn- join-sqls
   ([s]
     (let [sr (eager-filtered-flatten (ComposedSql. s nil) #(instance? ComposedSql %))
@@ -296,3 +285,31 @@
       (illegal-argument
         (str "Unknown arguments " (vec ma) " in sql.")))
     (->Sql pq (map args al))))
+
+(def ^:dynamic print-ident-level nil)
+
+(defn- print-ident
+  [^Appendable w]
+  (when print-ident-level
+    (dotimes [_ print-ident-level]
+      (.append w "  "))))
+
+(defmethod print-method ComposedSql [^ComposedSql cs ^Appendable w]
+  (let [sqls (.sqls cs)]
+    (.append w "#<[\n")
+    (binding [print-ident-level (inc (or print-ident-level 0))]
+      (doseq [s sqls]
+        (print-ident w)
+        (print-method s w)
+        (.append w \newline)))
+    (print-ident w)
+    (.append w "]>")))
+
+(defmethod print-method Sql [^Sql s ^Appendable w]
+  (.append w "#<")
+  (when-not (special? s)
+    (print-method (.sql s) w)
+    (doseq [a (.args s)]
+      (.append w \space)
+      (print-method a w)))
+  (.append w ">"))
