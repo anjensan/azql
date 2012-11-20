@@ -16,27 +16,26 @@
 (defn sql
   "Converts object to Sql. Requires jdbc-coneection."
   ([& args]
-    (with-azql-context
-      (apply sql* args))))
+    (with-azql-context (apply sql* args))))
 
 (defrecord Select
     [tables joins fields where
      group having order
      modifier offset limit]
   SqlLike
-  (as-sql [this] (sql* (render-select this))))
+  (as-sql [this] (as-sql (render-select this))))
 
 (defrecord Insert [table fields records]
   SqlLike
-  (as-sql [this] (sql* (render-insert this))))
+  (as-sql [this] (as-sql (render-insert this))))
 
 (defrecord Delete [tables joins where]
   SqlLike
-  (as-sql [this] (sql* (render-delete this))))
+  (as-sql [this] (as-sql (render-delete this))))
 
 (defrecord Update [table fields where]
   SqlLike
-  (as-sql [this] (sql* (render-update this))))
+  (as-sql [this] (as-sql (render-update this))))
 
 (do-template
   [v]

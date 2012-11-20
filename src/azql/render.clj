@@ -10,7 +10,7 @@
   (cond
    (keyword? v) v
    (string? v) (keyword v)
-   :else (parentheses v)))
+   :else (compose-sql (parentheses v))))
 
 (defn render-alias?
   "Checks whether it is necessary to render alias of table/column."
@@ -23,18 +23,19 @@
 (defndialect render-table
   [[alias table]]
   (let [t (as-table-or-subquery table)]
-    (if (render-alias? alias t) [t AS alias] t)))
+    (if (render-alias? alias t) (compose-sql t AS alias) t)))
 
 (defndialect render-field
   [[alias nm]]
   (let [e (render-expression nm)]
-    (if (render-alias? alias nm) [e AS alias] e)))
+    (if (render-alias? alias nm) (compose-sql e AS alias) e)))
 
 (defndialect render-fields
-  [{:keys [fields tables]}]
-  (if (or (nil? fields) (= fields :*))
-    ASTERISK
-    (comma-list (map render-field fields))))
+  [{:keys [fields]}]
+  (compose-sql
+    (if (or (nil? fields) (= fields :*))
+      ASTERISK
+      (comma-list (map render-field fields)))))
 
 (defndialect render-join-type
   [jt]
@@ -46,31 +47,37 @@
 (defndialect render-from
   [{:keys [tables joins]}]
   (check-argument (not (empty? joins)) "No tables specified")
-  [FROM
-   (let [[a jn] (first joins)
-         t (tables a)]
-     (check-state  (contains? #{nil :cross} jn) "First join should be CROSS JOIN.")
-     (render-table [a t]))
-   (for [[a jn c] (rest joins) :let [t (tables a)]]
-     (if (nil? jn)
-       [NOSP COMMA (render-table [a t])]
-       [(render-join-type jn)
-        (render-table [a t])
-        (if c [ON (render-expression c)] NONE)]))])
+  (compose-sql
+    FROM
+    (let [[a jn] (first joins)
+          t (tables a)]
+      (check-state (contains? #{nil :cross} jn) "First join should be CROSS JOIN.")
+      (render-table [a t]))
+    (compose-sql*
+      (for [[a jn c] (rest joins) :let [t (tables a)]]
+        (if (nil? jn)
+          (compose-sql NOSP COMMA (render-table [a t]))
+          (compose-sql
+            (render-join-type jn)
+            (render-table [a t])
+            (if c
+              (compose-sql ON (render-expression c))
+              NONE)))))))
 
 (defndialect render-where
   [{where :where}]
   (if where
-    [WHERE (render-expression where)]
+    (compose-sql WHERE (render-expression where))
     NONE))
 
 (defndialect render-order
   [{order :order}]
   (let [f (fn [[c d]]
-            [(render-expression c)
-             (get {nil NONE :asc ASC :desc DESC} d d)])]
+            (compose-sql
+              (render-expression c)
+              (get {nil NONE :asc ASC :desc DESC} d d)))]
     (if order
-      [ORDER_BY (comma-list (map f order))]
+      (compose-sql ORDER_BY (comma-list (map f order)))
       NONE)))
 
 (defndialect render-modifier
@@ -85,43 +92,46 @@
   [{:keys [limit offset]}]
   (if (or limit offset)
     (let [lim (arg (if limit (int limit) (max-limit-value)))]
-      [LIMIT lim
-       (if offset [OFFSET (arg (int offset))] NONE)])
+      (compose-sql LIMIT lim
+       (if offset (compose-sql OFFSET (arg (int offset))) NONE)))
     NONE))
 
 (defndialect render-group
   [{g :group}]
   (if g
-    [GROUP_BY (comma-list g)]
+    (compose-sql GROUP_BY (comma-list g))
     NONE))
 
 (defndialect renger-having
   [{h :having}]
   (if h
-    [HAVING (render-expression h)]
+    (compose-sql HAVING (render-expression h))
     NONE))
 
 (defndialect render-select
   [relation]
-  [SELECT
-   (render-modifier relation)
-   (render-fields relation)
-   (render-from relation)
-   (render-where relation)
-   (render-order relation)
-   (render-group relation)
-   (renger-having relation)
-   (render-limit relation)])
+  (compose-sql
+    SELECT
+    (render-modifier relation)
+    (render-fields relation)
+    (render-from relation)
+    (render-where relation)
+    (render-order relation)
+    (render-group relation)
+    (renger-having relation)
+    (render-limit relation)))
 
 (defndialect render-delete
   [query]
-  [DELETE
-   (render-from query)
-   (render-where query)])
+  (compose-sql
+    DELETE
+    (render-from query)
+    (render-where query)))
 
 (defndialect render-into
   [{t :table}]
-  [INTO (qname t)])
+  (compose-sql
+    INTO (qname t)))
 
 (defn collect-fields
   [records]
@@ -131,32 +141,34 @@
   [{fields :fields records :records}]
   (let [fields (if fields fields (collect-fields records))]
     (->Sql
-     (:sql
-      (sql*
-       (parentheses (comma-list fields))
-       VALUES
-       (parentheses
-        (comma-list (repeat (count fields) QMARK)))))
-     (if (> (count records) 1)
-       (map
-        (fn [f] (with-meta (map f records) {:batch true}))
-        fields)
-       (map (partial get (first records)) fields)))))
+      (:sql
+        (sql*
+          (parentheses (comma-list fields))
+          VALUES
+          (parentheses
+            (comma-list (repeat (count fields) QMARK)))))
+      (if (> (count records) 1)
+        (map
+          (fn [f] (with-meta (map f records) {:batch true}))
+          fields)
+        (map (partial get (first records)) fields)))))
 
 (defndialect render-insert
   [query]
-  [INSERT
-   (render-into query)
-   (render-values query)])
+  (compose-sql
+    INSERT
+    (render-into query)
+    (render-values query)))
 
 (defndialect render-update-fields
   [{:keys [fields]}]
   (comma-list
-   (map (fn [[n c]] [SET (qname n) EQUALS (render-expression c)]) fields)))
+   (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression c))) fields)))
 
 ; TODO: add joins
 (defndialect render-update
   [{t :table :as query}]
-  [UPDATE (render-table t)
-   (render-update-fields query)
-   (render-where query)])
+  (compose-sql
+    UPDATE (render-table t)
+    (render-update-fields query)
+    (render-where query)))

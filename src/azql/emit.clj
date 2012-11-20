@@ -83,8 +83,8 @@
   ([qn] (Sql. (emit-qname qn) nil))
   ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
 
-(def ^{:doc "Empty token. Preserve space."} NOSP (Sql. "" nil))
-(def ^{:doc "Empty token."} NONE (Sql. "" nil))
+(def ^{:doc "Empty token. Preserve space."} NOSP (raw ""))
+(def ^{:doc "Empty token."} NONE (raw ""))
 
 (defn- special?
   [t]
@@ -108,9 +108,7 @@
   (as-sql [this]
     (if (:batch (meta this))
       (batch-arg this)
-      (let [s (map as-sql (eager-filtered-flatten this #(not (:batch (meta %)))))]
-        (Sql. (join-sql-strings s)
-              (seq (mapcat :args s))))))
+      (illegal-argument "Can't convert '" (vec this) "' to sql.")))
   clojure.lang.Keyword
   (as-sql [this] (qname this))
   clojure.lang.Symbol
@@ -120,13 +118,64 @@
   nil
   (as-sql [this] #=(arg nil)))
 
+(declare compose-sql)
+(declare compose-sql*)
+(declare join-sqls)
+
+(deftype ComposedSql [sqls meta]
+  SqlLike
+  (as-sql [this] (join-sqls (.sqls this)))
+  clojure.lang.Sequential
+  clojure.lang.Seqable
+  (seq [this] (seq (.sqls this)))
+  clojure.lang.IObj
+  (withMeta [this m] (ComposedSql. sqls m))
+  (meta [this] (.-meta this)))
+
+(def ^:dynamic composed-sql-print-ident 0)
+
+(defmethod print-method ComposedSql [^ComposedSql cs ^Appendable w]
+  (let [sqls (.sqls cs)]
+    (.append w "#<[")
+    (doseq [s sqls]
+      (.append w \space)
+      (print-method s w)
+      (.append w \space))
+    (.append w "]>")))
+
+(defn- join-sqls
+  ([s]
+    (let [sr (eager-filtered-flatten (ComposedSql. s nil) #(instance? ComposedSql %))
+          s (map as-sql sr)]
+      (Sql. (join-sql-strings s)
+            (seq (mapcat :args s))))))
+
+(defn compose-sql
+  "Composes SQL-like objects into one."
+  ([] NONE)
+  ([a]
+    (if (instance? ComposedSql a)
+      a
+      (ComposedSql. [a] nil)))
+  ([a & r]
+    (ComposedSql. (cons a r) nil)))
+
+(defn compose-sql*
+  "Composes SQL-like objects into one.
+   Last arg treated as a sequence (similar to `list*`)."
+  ([] NONE)
+  ([& a]
+    (let [s (apply list* a)]
+      (if (empty? s)
+        NONE
+        (ComposedSql. s nil)))))
+
 (defn sql*
   "Converts object to Sql.
    For internal usag, prefer azql.core/sql.
    Warning: this functions doesn't escape keywords."
   ([] NONE)
-  ([v] (if (sql? v) v (as-sql v)))
-  ([v & r] (as-sql (cons v r))))
+  ([v & r] (as-sql (compose-sql* v r))))
 
 (do-template
  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
@@ -155,7 +204,9 @@
 (defn parentheses
   "Surrounds token with parentheses."
   [e]
-  ^{::without-parentheses e} [LEFT_PAREN NOSP e NOSP RIGHT_PAREN])
+  (with-meta
+    (compose-sql LEFT_PAREN NOSP e NOSP RIGHT_PAREN)
+    {::without-parentheses e}))
 
 (defn remove-parentheses
   "Removes parenthesis."
@@ -165,7 +216,8 @@
 (defn comma-list
   "Returns values separated by comma."
   [values]
-  (interpose [NOSP COMMA] (map remove-parentheses values)))
+  (compose-sql*
+    (interpose (compose-sql NOSP COMMA) (map remove-parentheses values))))
 
 (defn as-alias-safe
   "Interprets value as column/table alias."

@@ -44,10 +44,8 @@
          "?" 1
          "?" "string"
          "?" nil
-         "? ?" [1 2]
          "?" (with-meta [1 2] {:batch true})
-         "=" '=
-         "X Y" ['X 'Y]))
+         "=" '=))
 
   (testing "collect parameters"
     (are [a z] (= a (:args (as-sql z)))
@@ -56,15 +54,16 @@
          [1] 1
          [1.12] 1.12
          [nil] nil
-         [1 2 3] [1 [[2] 3]]
-         ["str" 1] [(parentheses [[:x '= "str"] AND [:y '<> 1]])]
-         [[1 2 3] 4] [:x (with-meta [1 2 3] {:batch true}) :y 4]))
+         [1 2 3] (compose-sql* 1 [2 3])
+         [1 2 3] (compose-sql (compose-sql 1 2) 3)
+         ["str" 1] (parentheses (compose-sql* :x '= "str" 'AND [:y '<> 1]))
+         [[1 2 3] 4] (parentheses (compose-sql :x (with-meta [1 2 3] {:batch true}) :y 4))))
 
   (testing "test sql generation and formating"
-    (are [sa z] (= (map->Sql sa) (sql* z))
+    (are [sa z] (= (map->Sql sa) (apply sql* z))
          {:sql "SELECT * FROM Table" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
-         {:sql "A  a B C D" :args nil} [[[(raw "A  a")] [(raw "B")]] [[[]]] [(raw "C")] (raw "D")]
-         {:sql "A ( () )  ,  BC" :args nil} (raw "A ( () )  ,  BC")
+         {:sql "A  a B C D" :args nil} [(compose-sql* (raw "A  a") (raw "B") [(raw "C") (raw "D")])]
+         {:sql "A ( () )  ,  BC" :args nil} [(raw "A ( () )  ,  BC")]
          {:sql "A B" :args nil}  [NONE NONE (raw "A") NONE NONE NONE NONE (raw "B") NONE NONE]
          {:sql "A, B, C" :args nil} [(raw "A") NOSP COMMA (raw "B") NOSP COMMA (raw "C")]
          {:sql "AB" :args nil} [(raw "A") NOSP NOSP (raw "B")]
@@ -74,12 +73,13 @@
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 
 (deftest test-helpers
-  (is (= "((?) = (?))" (:sql (sql* (parentheses [(parentheses 1) '= (parentheses 2)])))))
-  (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses [1 '+ 2]))))))
+  (is (= "((?) = (?))" (:sql (sql* (parentheses (compose-sql (parentheses 1) '= (parentheses 2)))))))
+  (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
   (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
   (is (= "?, ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
   (is (= 123 (remove-parentheses (parentheses 123))))
-  (is (= 123 (remove-parentheses 123))))
+  (is (= 123 (remove-parentheses 123)))
+  (is (= "X, Y" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)]))))))
 
 (deftest test-surrogate-aliases
   (is (surrogate-alias? (generate-surrogate-alias)))

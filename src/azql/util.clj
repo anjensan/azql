@@ -23,7 +23,7 @@
                (if (and (sequential? item) (flat? item))
                  (reduce rec acc item)
                  (conj! acc item)))]
-       (persistent! (rec (transient []) [col]))))
+       (persistent! (rec (transient []) col))))
   ([col] (eager-filtered-flatten col (constantly true))))
 
 (definline keyword-or-string?

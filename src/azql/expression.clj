@@ -17,8 +17,12 @@
   (assoc q :fields {(as-alias-safe f) f}))
 
 (defn- par
-  ([a] (parentheses a))
-  ([a & r] (parentheses (cons a r))))
+  ([a]
+    (if (sequential? a)
+      (compose-sql (parentheses (compose-sql* a)))
+      (compose-sql (parentheses (compose-sql a)))))
+  ([a & r]
+    (compose-sql (parentheses (compose-sql* a r)))))
 
 (def ^:private ^:const like-pattern-escaping-char "\\")
 
@@ -39,13 +43,15 @@
 (defn render-function
   "Renders function (with or without arguments)."
   ([fname]
-    [(raw (name fname))
-     NOSP
-     (raw "()")])
+    (compose-sql
+      (raw (name fname))
+      NOSP
+      (raw "()")))
   ([fname & args]
-    [(raw (name fname))
-     NOSP
-     (par (comma-list args))]))
+    (compose-sql
+      (raw (name fname))
+      NOSP
+      (par (comma-list args)))))
 
 (defn- canonize-operator-symbol
   [s]
@@ -205,17 +211,17 @@
   [a b]
   (par
    (cond
-    (nil? a) [b IS_NULL]
-    (nil? b) [a IS_NULL]
-    :else [a EQUALS b])))
+    (nil? a) (compose-sql b IS_NULL)
+    (nil? b) (compose-sql a IS_NULL)
+    :else (compose-sql a EQUALS b))))
 
 (defoperator not=
   [a b]
   (par
-   (cond
-    (nil? a) [b IS_NOT_NULL]
-    (nil? b) [a IS_NOT_NULL]
-    :else [a NOT_EQUALS b])))
+    (cond
+      (nil? a) (compose-sql b IS_NOT_NULL)
+      (nil? b) (compose-sql a IS_NOT_NULL)
+      :else (compose-sql a NOT_EQUALS b))))
 
 (defoperator +
   ([x] (par [UPLUS x]))
@@ -230,7 +236,7 @@
 
 (defoperator /
   [x y]
-  (par [x DIVIDE y]))
+  (par x DIVIDE y))
 
 (defoperator not
   [x]
@@ -275,28 +281,28 @@
    :else (par a IN (parentheses (comma-list b)))))
 
 (defoperator count
-  ([r] [COUNT NOSP (parentheses r)])
+  ([r] (compose-sql COUNT NOSP (parentheses r)))
   ([d r]
      (case d
-       :distinct [COUNT (par DISTINCT r)]
+       :distinct (compose-sql COUNT (par DISTINCT r))
        nil [COUNT (par r)]
        (illegal-argument "Unknown modifier " d))))
 
 (defoperator max
   [x]
-  [MAX NOSP (par x)])
+  (compose-sql MAX NOSP (par x)))
 
 (defoperator min
   [x]
-  [MIN NOSP (par x)])
+  (compose-sql MIN NOSP (par x)))
 
 (defoperator avg
   [x]
-  [AVG NOSP (par x)])
+  (compose-sql AVG NOSP (par x)))
 
 (defoperator sum
   [x]
-  [SUM NOSP (par x)])
+  (compose-sql SUM NOSP (par x)))
 
 (defoperator exists?
   [q]
@@ -307,16 +313,16 @@
   (par NOT_EXISTS (par q)))
 
 (defoperator some
-  ([q] [SOME (par q)])
-  ([f q] [SOME (par (attach-field f q))]))
+  ([q] (compose-sql SOME (par q)))
+  ([f q] (compose-sql SOME (par (attach-field f q)))))
 
 (defoperator any
-  ([q] [ANY (par q)])
-  ([f q] [ANY (par (attach-field f q))]))
+  ([q] (compose-sql ANY (par q)))
+  ([f q] (compose-sql ANY (par (attach-field f q)))))
 
 (defoperator all
-  ([q] [ALL (par q)])
-  ([f q] [ALL (par (attach-field f q))]))
+  ([q] (compose-sql ALL (par q)))
+  ([f q] (compose-sql ALL (par (attach-field f q)))))
 
 (defoperator like?
   [a b]
