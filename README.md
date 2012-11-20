@@ -15,8 +15,8 @@ Main goals of this project:
 
 Add the following to your project.clj:
 
-	:::clojure
-	[azql "0.1.0-SNAPSHOT"]
+    :::clojure
+    [azql "0.1.0-SNAPSHOT"]
 
 
 ## Usage
@@ -25,22 +25,22 @@ Add the following to your project.clj:
 
 AZQL syntax is quite similar to SQL:
 
-	:::clojure
-	(select
-	  (fields [:id :name :email])
-	  (from :a :Users)
-	  (where (= :a.role "ADMIN"))
-	  (fetch-all))
+    :::clojure
+    (select
+      (fields [:id :name :email])
+      (from :a :Users)
+      (where (= :a.role "ADMIN"))
+      (fetch-all))
 
 After macroexpansions:
 
-	:::clojure
-	(->
-	  (select*)
-	  (fields* {:id :id, :name :name, :email :email})
-	  (join* nil :a :Users) ; nil means 'implicit cross join'
-	  (where* ['= :a.role "ADMIN"])
-	  (fetch-all))
+    :::clojure
+    (->
+      (select*)
+      (fields* {:id :id, :name :name, :email :email})
+      (join* nil :a :Users) ; nil means 'implicit cross join'
+      (where* ['= :a.role "ADMIN"])
+      (fetch-all))
 
 Actual work is doing in `fetch-all` - this function executes query
 and converts `resultset-seq` into vector.
@@ -53,63 +53,63 @@ Library provides some alternatives:
 
 Example:
 
-	:::clojure
-	(with-fetch [f (table :Users)]
-	  (reduce + (map :rating f)))
+    :::clojure
+    (with-fetch [f (table :Users)]
+      (reduce + (map :rating f)))
 
 It is possible to compose additional where's:
 
-	:::clojure
-	(def all-users (table :Users))
-	(def banned-users (-> all-users (where (= :status "BANNED"))))
-	(def banned-admins (-> banned-users (where (= :role "ADMIN")))
-	(println (fetch-all banned-admins))
+    :::clojure
+    (def all-users (table :Users))
+    (def banned-users (-> all-users (where (= :status "BANNED"))))
+    (def banned-admins (-> banned-users (where (= :role "ADMIN")))
+    (println (fetch-all banned-admins))
 
 Also you can use map-style conditions.
 
-	:::clojure
-	(select
-	  (from :Users)
-	  (where {:first "Adrei", :last "Zhlobich"}))
+    :::clojure
+    (select
+      (from :Users)
+      (where {:first "Adrei", :last "Zhlobich"}))
 
 The actual SQL is available trough the function `sql`:
 
-	:::clojure
-	user> (sql (select (from :Users) (where (= :id 123))))
-	#azql.emit.Sql{:sql "SELECT * FROM \"Users\" WHERE (\"id\" = ?)", :args [123]}
+    :::clojure
+    user> (sql (select (from :Users) (where (= :id 123))))
+    #azql.emit.Sql{:sql "SELECT * FROM \"Users\" WHERE (\"id\" = ?)", :args [123]}
 
 
 ### Joins
 
 AZQL supports all types of joins:
 
-	:::clojure
-	(select
-	  (from :a :A)                      ; table 'A', alias 'a', implicit cross join
-	  (join :b :B (= :a.x :b.y))        ; inner join
-	  (join-cross :c :B)                ; explicit cross join
-	  (join-inner :D (= :a.x :D.y))
-	  (join-full :e :E (and (= :e.x :a.x) (:e.y :D.y))))
+    :::clojure
+    (select
+      (from :a :A)                      ; table 'A', alias 'a', implicit cross join
+      (join :b :B (= :a.x :b.y))        ; inner join
+      (join-cross :c :B)                ; explicit cross join
+      (join-inner :D (= :a.x :D.y))
+      (join-full :e :E (and (= :e.x :a.x) (:e.y :D.y))))
 
 The only restriction is that first join must be 'implicit cross join' (function `from`).
 It is possible to use vendor-specific joins:
 
-	:::clojure
-	(select
-	  (from :a :TableOne)
-	  (join* (raw "COOL JOIN") :b :TableTwo (= :b.x = :a.y)))
+    :::clojure
+    (select
+      (from :a :TableOne)
+      (join* (raw "COOL JOIN") :b :TableTwo (= :b.x = :a.y)))
 
 
 ### Ordering
 
 You can use ordering:
 
-	:::clojure
-	(select
-	  (from :A)
-	  (order :field1)
-	  (order :field2 :desc)
-	  (order (+ :x :y) :asc))
+    :::clojure
+    (select
+      (from :A)
+      (order :field1)
+      (order :field2 :desc)
+      (order (+ :x :y) :asc))
 
 It will produce 'SELECT * FROM "A" ORDER BY ("x" + "y") ASC, "field2" DESC, "field1"'.
 
@@ -118,80 +118,80 @@ It will produce 'SELECT * FROM "A" ORDER BY ("x" + "y") ASC, "field2" DESC, "fie
 
 AZQL supports grouping:
 
-	:::clojure
-	(select
-	  (fields {:name :u.name})
-	  (from :u :Users)
-	  (join :p :Posts (= :p.userid :u.id))
-	  (group :u.name)
-	  (having (> 10 (count :p.id))))
+    :::clojure
+    (select
+      (fields {:name :u.name})
+      (from :u :Users)
+      (join :p :Posts (= :p.userid :u.id))
+      (group :u.name)
+      (having (> 10 (count :p.id))))
 
 
 ### Subqueries
 
 Library supports subqueries:
 
-	:::clojure
-	(def all-users (select (from :Users)))
-	(def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
-	(fetch-all all-active-users)
+    :::clojure
+    (def all-users (select (from :Users)))
+    (def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
+    (fetch-all all-active-users)
 
 
 ALL, ANY and SOME are supported also.
 
-	:::clojure
-	(select
-	  (from :u :Users)
-	  (where (= :u.id (any (select [:id] (from :ActiveUsers)))))
+    :::clojure
+    (select
+      (from :u :Users)
+      (where (= :u.id (any (select [:id] (from :ActiveUsers)))))
 
 Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select'.
 So, you must use 'select' in you subqueries or pass them as a value. Example:
 
-	:::clojure
-	(let [sq (fields [:id] (table :ActiveUsers))]
-	  (select
-	    (from :u :Users)
-	    (where (= :u.id (any sq)))))
+    :::clojure
+    (let [sq (fields [:id] (table :ActiveUsers))]
+      (select
+        (from :u :Users)
+        (where (= :u.id (any sq)))))
 
 ### Limit and offest
 
-	Library supports limiting of results (with offset):
+Library supports limiting of results (with offset):
 
-	:::clojure
-	(select
-	  (from :u :Users)
-	  (where (like? :name "%Andrei%"))
-	  (limit 100)
-	  (offset 25))
+    :::clojure
+    (select
+      (from :u :Users)
+      (where (like? :name "%Andrei%"))
+      (limit 100)
+      (offset 25))
 
 ### CRUD
 
 Library supports all CRUD operations.
 Intert new records:
 
-	:::clojure
-	(insert! :table
-	  (values [{:field1 1, :field2 "value"}, {:field1 2, :field2 "value"}]))
+    :::clojure
+    (insert! :table
+      (values [{:field1 1, :field2 "value"}, {:field1 2, :field2 "value"}]))
 
 Columns can be explicitly specified:
 
-	:::clojure
-	(insert! :table
-	  (fields [:a :b])
-	  (values [{:a 1, :b 2}, {:a 3, :b 4}]))
+    :::clojure
+    (insert! :table
+      (fields [:a :b])
+      (values [{:a 1, :b 2}, {:a 3, :b 4}]))
 
 Update:
 
-	:::clojure
-	(update! :table
-	  (setf :cnt (+ :cnt 1))
-	  (setf :vale "new-value")
-	  (where (in? :id [1 2 3])))
+    :::clojure
+    (update! :table
+      (setf :cnt (+ :cnt 1))
+      (setf :vale "new-value")
+      (where (in? :id [1 2 3])))
 
 Delete:
 
-	:::clojure
-	(delete! :table (where (= :id 1)))
+    :::clojure
+    (delete! :table (where (= :id 1)))
 
 
 ### Custom dialects
