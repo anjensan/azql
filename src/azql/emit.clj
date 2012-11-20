@@ -2,7 +2,8 @@
   (:use [azql util dialect])
   (:use clojure.template)
   (:require [clojure.string :as s])
-  (:require [clojure.java.jdbc :as jdbc]))
+  (:require [clojure.java.jdbc :as jdbc])
+  (:import java.util.regex.Matcher))
 
 (def ^:dynamic ^:private dialect-naming-strategy-installed false)
 
@@ -196,7 +197,7 @@
     (string? n) (keyword n)
     :else (generate-surrogate-alias)))
 
-(defn- format-interpolated-sql-arg
+(defn format-interpolated-sql-arg
   [a]
   (cond
     (string? a)
@@ -215,7 +216,10 @@
   (let [{ss :sql as :args} (as-sql q)]
     (reduce
       (fn [s a]
-        (s/replace-first s #"\?" (format-interpolated-sql-arg a)))
+        (s/replace-first
+          s #"\?"
+          (Matcher/quoteReplacement
+            (format-interpolated-sql-arg a))))
       ss as)))
 
 (defn- parse-placeholders
