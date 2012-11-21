@@ -37,11 +37,18 @@
   SqlLike
   (as-sql [this] (as-sql (render-update this))))
 
+(defrecord PrecompiledSql [content]
+  SqlLike
+  (as-sql [this] (.content this)))
+
 (do-template
   [v]
   (defmethod print-method v [s ^Appendable w]
     (.append w (interpolate-sql s)))
   Select Insert Update Delete)
+
+(defmethod print-method PrecompiledSql [^PrecompiledSql s ^Appendable w]
+  (print-method (.content s) w))
 
 (declare fields)
 (declare fields*)
@@ -63,6 +70,58 @@
     (list* (if (list? a) a `(fields ~a)) body)))
 
 (register-subquery-symbol 'select)
+
+(defrecord SurrogatedArg [symbol]
+  SqlLike
+  (as-sql [this] (arg this)))
+
+(defn- emit-precompiled-select
+  [name args body]
+  (let [sargs (mapv ->SurrogatedArg args)
+        sargs-args-map (into {} (map vector sargs args))]
+    `(let [sqls# (atom {})
+           original# (fn ~args (select ~@body (sql*)))
+           compile# (fn [] (apply original# ~sargs))]
+       (defn ~name ~args
+         (with-recognized-dialect
+           (let [dialect# (current-dialect)]
+             (let [sql# (get @sqls# dialect#)]
+               (when-not sql#
+                 (swap! sqls# assoc dialect# (compile#))))
+             (let [sql# (get @sqls# dialect#)
+                   args# (:args sql#)]
+               (->PrecompiledSql
+                 (assoc sql# :args (replace ~sargs-args-map args#))))))))))
+
+(defn- emit-raw-select
+  [name args sql]
+  (let [args-map (into {} (map (juxt keyword identity) args))]
+    `(defn ~name ~args
+      (->PrecompiledSql
+         (format-sql ~sql ~args-map)))))
+
+(defmacro defselect
+  "Define new pre-rendered query.
+   Query is compiled once for each dialect."
+  [& name-args-body]
+  (let [[name args & body]
+        (if (string? (second name-args-body))
+          (list*
+            (vary-meta (first name-args-body) assoc :doc (second name-args-body))
+            (nnext name-args-body))
+          name-args-body)]
+    (check-argument
+      (symbol? name)
+      "First argument to defselect should be a Symbol")
+    (check-argument
+      (every? symbol? args)
+      "Macro defselect doesn't support destructuring")
+    (check-argument
+      (vector? args)
+      "Parameter declaration quote should be a vector")
+    (if (and (== 1 (count body)) (string? (first body)))
+      (emit-raw-select name args (first body))
+      (emit-precompiled-select name args body))))
 
 (defn table
   "Select all records from a table."
@@ -181,14 +240,12 @@
 (defn limit
   "Limits number of rows."
   [{ov :limit :as relation} v]
-  (check-argument (integer? v) "Limit must be integer")
   (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
   "Adds an offset to query."
   [{ov :offset :as relation} v]
-  (check-argument (integer? v) "Offset must be integer")
   (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 

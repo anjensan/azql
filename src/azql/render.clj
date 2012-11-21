@@ -91,9 +91,9 @@
 (defndialect render-limit
   [{:keys [limit offset]}]
   (if (or limit offset)
-    (let [lim (arg (if limit (int limit) (max-limit-value)))]
+    (let [lim (arg (if limit limit (max-limit-value)))]
       (compose-sql LIMIT lim
-       (if offset (compose-sql OFFSET (arg (int offset))) NONE)))
+       (if offset (compose-sql OFFSET offset) NONE)))
     NONE))
 
 (defndialect render-group

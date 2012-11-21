@@ -206,6 +206,48 @@
          "SELECT * FROM A WHERE (z <> ALL (SELECT t FROM X WHERE (x <> ?)))"
          (select (from :A) (where (<> :z (all :t (select (from :X) (where (<> :x 1))))))))))
 
+(deftest test-defselect
+  (testing "testing defselect azql queries"
+
+    (defselect dst-select [] (from :X))
+    (is (= "SELECT * FROM X" (:sql (sql* (dst-select)))))
+    (is (= [] (:args (sql* (dst-select)))))
+
+    (defselect dst-select [x y] (from :X) (where (and (= y :y) (= :x x))))
+    (is (= "SELECT * FROM X WHERE ((? = y) AND (x = ?))" (:sql (sql* (dst-select 1 2)))))
+    (is (= [2 1] (:args (sql* (dst-select 1 2)))))
+
+    (defselect ^:x dst-select "doc" [a _] (from :X) (limit a))
+    (is (= "SELECT * FROM X LIMIT ?" (:sql (sql* (dst-select 1 2)))))
+    (is (= [1] (:args (sql* (dst-select 1 2)))))
+    (is (= {:doc "doc" :x true} (select-keys (meta #'dst-select) #{:doc :x}))))
+
+  (testing "testing defselect with dialects"
+    (defselect dst-select [] (from :X))
+    (is (= "SELECT * FROM X"
+           (:sql(sql*
+                  (binding [azql.dialect/*dialect* ::dialect]
+                    (dst-select))))))
+    (is (= "SELECT * FROM \"X\""
+           (:sql(sql*
+                  (binding [azql.dialect/*dialect* default-dialect]
+                    (dst-select)))))))
+
+  (testing "testing defselect with raw queries"
+
+    (defselect dst-select [] "select")
+    (is (= "select" (:sql (sql* (dst-select)))))
+    (is (= [] (:args (sql* (dst-select)))))
+
+    (defselect dst-select [x y] "SELECT * FROM X WHERE :y = y AND x = :x")
+    (is (= "SELECT * FROM X WHERE ? = y AND x = ?" (:sql (sql* (dst-select 1 2)))))
+    (is (= [2 1] (:args (sql* (dst-select 1 2)))))
+
+    (defselect ^:x dst-select "doc" [a b c] ":c:a:b")
+    (is (= "???" (:sql (sql* (dst-select 1 2 3)))))
+    (is (= [3 1 2] (:args (sql* (dst-select 1 2 3)))))
+    (is (= {:doc "doc" :x true} (select-keys (meta #'dst-select) #{:doc :x})))))
+
 (def single-table-select? #'azql.core/single-table-select?)
 
 (deftest test-select-from-single-table

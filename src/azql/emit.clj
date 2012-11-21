@@ -133,9 +133,13 @@
   "Converts object to Sql.
    For internal usage, you should prefer azql.core/sql."
   ([] NONE)
+  ([v]
+    (if (sql? v)
+      v
+      (with-dialect-naming-strategy
+        (as-sql v))))
   ([v & r]
-    (with-dialect-naming-strategy
-      (as-sql (compose-sql* v r)))))
+    (sql* (compose-sql* v r))))
 
 (defn- special?
   [t]
@@ -267,14 +271,15 @@
   "Replaces placeholders with actual values.
    For debug purposes only!"
   [q]
-  (let [{ss :sql as :args} (as-sql q)]
-    (reduce
-      (fn [s a]
-        (s/replace-first
-          s #"\?"
-          (Matcher/quoteReplacement
-            (format-interpolated-sql-arg a))))
-      ss as)))
+  (with-dialect-naming-strategy
+    (let [{ss :sql as :args} (as-sql q)]
+      (reduce
+        (fn [s a]
+          (s/replace-first
+            s #"\?"
+            (Matcher/quoteReplacement
+              (format-interpolated-sql-arg a))))
+        ss as))))
 
 (defn- parse-placeholders
   [query]
