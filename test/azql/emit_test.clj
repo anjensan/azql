@@ -61,7 +61,8 @@
 
   (testing "test sql generation and formating"
     (are [sa z] (= (map->Sql sa) (apply sql* z))
-         {:sql "SELECT * FROM Table" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
+         {:sql "\"A\" , \"B\" ?" :args [1]} [:A COMMA :B 1]
+         {:sql "SELECT * FROM \"Table\"" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
          {:sql "A  a B C D" :args nil} [(compose-sql* (raw "A  a") (raw "B") [(raw "C") (raw "D")])]
          {:sql "A ( () )  ,  BC" :args nil} [(raw "A ( () )  ,  BC")]
          {:sql "A B" :args nil}  [NONE NONE (raw "A") NONE NONE NONE NONE (raw "B") NONE NONE]
@@ -80,7 +81,7 @@
   (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
   (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
   (is (= "?, ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
-  (is (= "X, Y" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)]))))))
+  (is (= "\"X\", \"Y\"" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)]))))))
 
 (deftest test-surrogate-aliases
   (is (surrogate-alias? (generate-surrogate-alias)))

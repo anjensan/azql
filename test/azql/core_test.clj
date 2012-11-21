@@ -2,12 +2,10 @@
   (:use clojure.test [azql emit dialect expression core])
   (:require [clojure.java.jdbc :as jdbc]))
 
-;; disable quoting
-(use-fixtures :once (fn [f] (with-bindings* {#'jdbc/*as-str* identity} f)))
-
 ;; custom dialect
 (register-dialect ::dialect)
 (deffunctions ::dialect fun sin cos)
+(defmethod entity-naming-strategy ::dialect [] str)
 (use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::dialect] (f))))
 
 (deftest test-simple-queries

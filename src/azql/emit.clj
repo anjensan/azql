@@ -7,8 +7,6 @@
 
 ; dialects
 
-(def ^:dynamic ^:private dialect-naming-strategy-installed false)
-
 (defndialect entity-naming-strategy
   "Returns entity naming strategy for clojure/jdbc."
   []
@@ -80,7 +78,7 @@
 (defn quote-name
   "Quotes name. Uses current jdbc naming strategy."
   [s]
-  (let [s (str s)]
+  (let [s (name s)]
     (if (= s "*") s (#'jdbc/*as-str* s))))
 
 (defn emit-qname
@@ -133,10 +131,11 @@
 
 (defn sql*
   "Converts object to Sql.
-   For internal usag, prefer azql.core/sql.
-   Warning: this functions doesn't escape keywords."
+   For internal usage, you should prefer azql.core/sql."
   ([] NONE)
-  ([v & r] (as-sql (compose-sql* v r))))
+  ([v & r]
+    (with-dialect-naming-strategy
+      (as-sql (compose-sql* v r)))))
 
 (defn- special?
   [t]
