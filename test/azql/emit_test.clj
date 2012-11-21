@@ -73,12 +73,13 @@
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 
 (deftest test-helpers
+  (is (= "(? = ?)" (:sql (sql* (parentheses 1 '= 2)))))
+  (is (= "(? = ?)" (:sql (sql* (parentheses* 1 ['=  2])))))
+  (is (= "((? = ?))" (:sql (sql* (parentheses (parentheses 1 '= 2))))))
   (is (= "((?) = (?))" (:sql (sql* (parentheses (compose-sql (parentheses 1) '= (parentheses 2)))))))
   (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
   (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
   (is (= "?, ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
-  (is (= 123 (remove-parentheses (parentheses 123))))
-  (is (= 123 (remove-parentheses 123)))
   (is (= "X, Y" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)]))))))
 
 (deftest test-surrogate-aliases
@@ -99,3 +100,12 @@
   (is (= "???" (:sql (format-sql ":x:y:z" {:x 1 :y 2 :z 3}))))
   (is (thrown? IllegalArgumentException
                (format-sql ":z = :x" {:x 1 :y 2}))))
+
+(deftest test-composed-sql
+  (is (= [1 2 3] (uncompose-sql (compose-sql 1 2 3))))
+  (is (= [1 2 3 4 5] (uncompose-sql (compose-sql* 1 (compose-sql 2 3) [4 5]))))
+  (is (= [[(compose-sql 1)]] (uncompose-sql [(compose-sql 1)])))
+  (is (= [NONE] (uncompose-sql (compose-sql))))
+  (is (= [NONE] (uncompose-sql (compose-sql* nil))))
+  (is (= [1] (uncompose-sql (compose-sql (compose-sql (compose-sql 1))))))
+  (is (= [NONE 1 NOSP] (uncompose-sql (compose-sql NONE (compose-sql (compose-sql 1)) NOSP)))))

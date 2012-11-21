@@ -16,14 +16,6 @@
   (check-argument (nil? (:fields q)) "Relation already has fields.")
   (assoc q :fields {(as-alias-safe f) f}))
 
-(defn- par
-  ([a]
-    (if (sequential? a)
-      (compose-sql (parentheses (compose-sql* a)))
-      (compose-sql (parentheses (compose-sql a)))))
-  ([a & r]
-    (compose-sql (parentheses (compose-sql* a r)))))
-
 (def ^:private ^:const like-pattern-escaping-char "\\")
 
 (defndialect like-pattern-escaping-sql
@@ -51,7 +43,7 @@
     (compose-sql
       (raw (name fname))
       NOSP
-      (par (comma-list args)))))
+      (parentheses (comma-list args)))))
 
 (defn- canonize-operator-symbol
   [s]
@@ -201,15 +193,15 @@
 
 (defoperator and
   [x & r]
-  (par (interpose AND (cons x r))))
+  (parentheses* (interpose AND (cons x r))))
 
 (defoperator or
   [x & r]
-  (par (interpose OR (cons x r))))
+  (parentheses* (interpose OR (cons x r))))
 
 (defoperator =
   [a b]
-  (par
+  (parentheses
    (cond
     (nil? a) (compose-sql b IS_NULL)
     (nil? b) (compose-sql a IS_NULL)
@@ -217,122 +209,122 @@
 
 (defoperator not=
   [a b]
-  (par
+  (parentheses
     (cond
       (nil? a) (compose-sql b IS_NOT_NULL)
       (nil? b) (compose-sql a IS_NOT_NULL)
       :else (compose-sql a NOT_EQUALS b))))
 
 (defoperator +
-  ([x] (par [UPLUS x]))
-  ([x & r] (par (interpose PLUS (cons x r)))))
+  ([x] (parentheses UPLUS x))
+  ([x & r] (parentheses* (interpose PLUS (cons x r)))))
 
 (defoperator -
-  ([x] (par [UMINUS x]))
-  ([a & r] (par (interpose MINUS (cons a r)))))
+  ([x] (parentheses UMINUS x))
+  ([a & r] (parentheses* (interpose MINUS (cons a r)))))
 
 (defoperator *
-  [x & r] (par (interpose MULTIPLY (cons x r))))
+  [x & r] (parentheses* (interpose MULTIPLY (cons x r))))
 
 (defoperator /
   [x y]
-  (par x DIVIDE y))
+  (parentheses x DIVIDE y))
 
 (defoperator not
   [x]
-  (par NOT x))
+  (parentheses NOT x))
 
 (defoperator <
   [a b]
-  (par a LESS b))
+  (parentheses a LESS b))
 
 (defoperator >
   [a b]
-  (par a GREATER b))
+  (parentheses a GREATER b))
 
 (defoperator <=
   [a b]
-  (par a LESS_EQUAL b))
+  (parentheses a LESS_EQUAL b))
 
 (defoperator >=
   [a b]
-  (par a GREATER_EQUAL b))
+  (parentheses a GREATER_EQUAL b))
 
 (defoperator nil?
   [x]
-  (par x IS_NULL))
+  (parentheses x IS_NULL))
 
 (defoperator not-nil?
   [x]
-  (par x IS_NOT_NULL))
+  (parentheses x IS_NOT_NULL))
 
 (defoperator not-in?
   [a b]
   (cond
    (empty? b) (render-true)
-   (extends? SqlLike (class b)) (par a NOT_IN (parentheses b))
-   :else (par a NOT_IN (parentheses (comma-list b)))))
+   (extends? SqlLike (class b)) (parentheses a NOT_IN (parentheses b))
+   :else (parentheses a NOT_IN (parentheses (comma-list b)))))
 
 (defoperator in?
   [a b]
   (cond
    (empty? b) (render-false)
-   (extends? SqlLike (class b)) (par a IN (parentheses b))
-   :else (par a IN (parentheses (comma-list b)))))
+   (extends? SqlLike (class b)) (parentheses a IN (parentheses b))
+   :else (parentheses a IN (parentheses (comma-list b)))))
 
 (defoperator count
   ([r] (compose-sql COUNT NOSP (parentheses r)))
   ([d r]
      (case d
-       :distinct (compose-sql COUNT (par DISTINCT r))
-       nil [COUNT (par r)]
+       :distinct (compose-sql COUNT (parentheses DISTINCT r))
+       nil [COUNT (parentheses r)]
        (illegal-argument "Unknown modifier " d))))
 
 (defoperator max
   [x]
-  (compose-sql MAX NOSP (par x)))
+  (compose-sql MAX NOSP (parentheses x)))
 
 (defoperator min
   [x]
-  (compose-sql MIN NOSP (par x)))
+  (compose-sql MIN NOSP (parentheses x)))
 
 (defoperator avg
   [x]
-  (compose-sql AVG NOSP (par x)))
+  (compose-sql AVG NOSP (parentheses x)))
 
 (defoperator sum
   [x]
-  (compose-sql SUM NOSP (par x)))
+  (compose-sql SUM NOSP (parentheses x)))
 
 (defoperator exists?
   [q]
-  (par EXISTS (par q)))
+  (parentheses EXISTS (parentheses q)))
 
 (defoperator not-exists?
   [q]
-  (par NOT_EXISTS (par q)))
+  (parentheses NOT_EXISTS (parentheses q)))
 
 (defoperator some
-  ([q] (compose-sql SOME (par q)))
-  ([f q] (compose-sql SOME (par (attach-field f q)))))
+  ([q] (compose-sql SOME (parentheses q)))
+  ([f q] (compose-sql SOME (parentheses (attach-field f q)))))
 
 (defoperator any
-  ([q] (compose-sql ANY (par q)))
-  ([f q] (compose-sql ANY (par (attach-field f q)))))
+  ([q] (compose-sql ANY (parentheses q)))
+  ([f q] (compose-sql ANY (parentheses (attach-field f q)))))
 
 (defoperator all
-  ([q] (compose-sql ALL (par q)))
-  ([f q] (compose-sql ALL (par (attach-field f q)))))
+  ([q] (compose-sql ALL (parentheses q)))
+  ([f q] (compose-sql ALL (parentheses (attach-field f q)))))
 
 (defoperator like?
   [a b]
-  (par a LIKE b ESCAPE (like-pattern-escaping-sql)))
+  (parentheses a LIKE b ESCAPE (like-pattern-escaping-sql)))
 
 (defoperator starts?
   [a b]
   (check-argument (string? b) "Pattern should be string.")
-  (par a LIKE (str (escape-like-pattern b) "%")
+  (parentheses a LIKE (str (escape-like-pattern b) "%")
    ESCAPE (like-pattern-escaping-sql)))
 
 (defoperator str
-  [x & r] (par (interpose STR_CONCAT (cons x r))))
+  [x & r] (parentheses* (interpose STR_CONCAT (cons x r))))

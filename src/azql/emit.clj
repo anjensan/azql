@@ -5,6 +5,8 @@
   (:require [clojure.java.jdbc :as jdbc])
   (:import java.util.regex.Matcher))
 
+; dialects
+
 (def ^:dynamic ^:private dialect-naming-strategy-installed false)
 
 (defndialect entity-naming-strategy
@@ -24,12 +26,22 @@
     (f)
     (with-bindings* {#'jdbc/*as-str* (entity-naming-strategy)} f)))
 
+; types
+
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'."))
 
 (defrecord Sql [sql args]
   SqlLike
   (as-sql [this] this))
+
+(declare composedsql-as-sql)
+
+(defrecord ComposedSql [sqls meta]
+  SqlLike
+  (as-sql [this] (composedsql-as-sql this)))
+
+; ctors
 
 (defn sql?
   "Checks if expression is rendered (raw) SQL."
@@ -86,59 +98,6 @@
 (def ^{:doc "Empty token. Preserve space."} NOSP (raw ""))
 (def ^{:doc "Empty token."} NONE (raw ""))
 
-(defn- special?
-  [t]
-  (or (identical? t NOSP) (identical? t NONE)))
-
-(defn- join-sql-strings
-  [sqls]
-  (let [sb (StringBuilder.)]
-    (loop [prev-nosp true, sq sqls]
-      (when-let [curr (first sq)]
-        (let [nosp (identical? NOSP curr)
-              spec (special? curr)]
-          (when-not (or spec prev-nosp)
-            (.append sb \space))
-          (.append sb (:sql curr))
-          (recur (and spec (or prev-nosp nosp)) (rest sq)))))
-    (.toString sb)))
-
-(extend-protocol SqlLike
-  clojure.lang.Sequential
-  (as-sql [this]
-    (if (:batch (meta this))
-      (batch-arg this)
-      (illegal-argument "Can't convert '" (vec this) "' to sql.")))
-  clojure.lang.Keyword
-  (as-sql [this] (qname this))
-  clojure.lang.Symbol
-  (as-sql [this] (raw (name this)))
-  Object
-  (as-sql [this] (arg this))
-  nil
-  (as-sql [this] #=(arg nil)))
-
-(declare compose-sql)
-(declare compose-sql*)
-(declare join-sqls)
-
-(deftype ComposedSql [sqls meta]
-  SqlLike
-  (as-sql [this] (join-sqls (.sqls this)))
-  clojure.lang.Sequential
-  clojure.lang.Seqable
-  (seq [this] (seq (.sqls this)))
-  clojure.lang.IObj
-  (withMeta [this m] (ComposedSql. sqls m))
-  (meta [this] (.-meta this)))
-
-(defn- join-sqls
-  ([s]
-    (let [sr (eager-filtered-flatten (ComposedSql. s nil) #(instance? ComposedSql %))
-          s (map as-sql sr)]
-      (Sql. (join-sql-strings s)
-            (seq (mapcat :args s))))))
-
 (defn compose-sql
   "Composes SQL-like objects into one."
   ([] NONE)
@@ -159,6 +118,19 @@
         NONE
         (ComposedSql. s nil)))))
 
+(defn uncompose-sql
+  "Unrolls tree of ComposedSqls to plain seq.
+   This function is eager."
+  ([csql]
+    (letfn [(rec
+              [acc item]
+              (if (instance? ComposedSql item)
+                (reduce rec acc (.sqls ^ComposedSql item))
+                (conj! acc item)))]
+      (persistent! (rec (transient []) csql)))))
+
+; rendering
+
 (defn sql*
   "Converts object to Sql.
    For internal usag, prefer azql.core/sql.
@@ -166,36 +138,76 @@
   ([] NONE)
   ([v & r] (as-sql (compose-sql* v r))))
 
-(do-template
- [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
+(defn- special?
+  [t]
+  (or (identical? t NOSP) (identical? t NONE)))
 
- SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON, AND, OR, NOT, NULL, AS,
- IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
- COUNT, MIN, MAX, AVG, SUM, INSERT, DELETE, VALUES, INTO, UPDATE,
- LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
- CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
- EXISTS, NOT_EXISTS, ALL, ANY, SOME,
- LIKE, ESCAPE)
+(defn- join-sql-strings
+  [sqls]
+  (let [sb (StringBuilder.)]
+    (loop [prev-nosp true, sq sqls]
+      (when-let [curr (first sq)]
+        (let [nosp (identical? NOSP curr)
+              spec (special? curr)]
+          (when-not (or spec prev-nosp)
+            (.append sb \space))
+          (.append sb (:sql curr))
+          (recur (and spec (or prev-nosp nosp)) (rest sq)))))
+    (.toString sb)))
 
-(do-template
- [kname value] (def kname (raw value))
+(defn- composedsql-as-sql
+  ([^ComposedSql cs]
+    (let [s (.sqls cs)]
+      (let [sr (uncompose-sql (compose-sql* s))
+            s (map as-sql sr)]
+        (Sql. (join-sql-strings s)
+              (seq (mapcat :args s)))))))
 
- COMMA ",",ASTERISK "*", QMARK "?",
- LEFT_PAREN "(", RIGHT_PAREN ")",
- EQUALS "=", NOT_EQUALS "<>", LESS "<", GREATER ">",
- LESS_EQUAL "<=", GREATER_EQUAL ">=", UPLUS "+",
- PLUS "+", MINUS "-", UMINUS "-", DIVIDE "/", MULTIPLY "*",
- STR_CONCAT "||")
+(extend-protocol SqlLike
 
+  clojure.lang.Sequential
+  (as-sql [this]
+    (if (:batch (meta this))
+      (batch-arg this)
+      (illegal-argument "Can't convert '" (vec this) "' to sql,
+                         probably you forget to add {:batch true} meta.")))
+
+  clojure.lang.IPersistentMap
+  (as-sql [this]
+    (illegal-argument "Can't convert '" this "' to sql."))
+
+  clojure.lang.Keyword
+  (as-sql [this] (qname this))
+
+  clojure.lang.Symbol
+  (as-sql [this] (raw (name this)))
+
+  Object
+  (as-sql [this] (arg this))
+
+  nil
+  (as-sql [this] #=(arg nil)))
 
 ; misc
 
+(def LEFT_PAREN (raw "("))
+(def RIGHT_PAREN (raw ")"))
+(def COMMA (raw ","))
+
 (defn parentheses
   "Surrounds token with parentheses."
-  [e]
-  (with-meta
-    (compose-sql LEFT_PAREN NOSP e NOSP RIGHT_PAREN)
-    {::without-parentheses e}))
+  ([e]
+    (with-meta
+      (compose-sql LEFT_PAREN NOSP e NOSP RIGHT_PAREN)
+      {::without-parentheses e}))
+  ([e & r]
+    (parentheses (compose-sql* e r))))
+
+(defn parentheses*
+  "Surrounds token with parentheses.
+   Last arg treated as a sequence (similar to `list*`)."
+  [& e]
+  (parentheses (apply compose-sql* e)))
 
 (defn remove-parentheses
   "Removes parenthesis."
@@ -237,6 +249,8 @@
     (keyword? n) n
     (string? n) (keyword n)
     :else (generate-surrogate-alias)))
+
+; debug print
 
 (defn format-interpolated-sql-arg
   [a]
@@ -313,3 +327,24 @@
       (.append w \space)
       (print-method a w)))
   (.append w ">"))
+
+; standard keywords
+
+(do-template
+ [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
+
+ SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON, AND, OR, NOT, NULL, AS,
+ IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
+ COUNT, MIN, MAX, AVG, SUM, INSERT, DELETE, VALUES, INTO, UPDATE,
+ LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
+ CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
+ EXISTS, NOT_EXISTS, ALL, ANY, SOME,
+ LIKE, ESCAPE)
+
+(do-template
+ [kname value] (def kname (raw value))
+
+ ASTERISK "*", QMARK "?", EQUALS "=", NOT_EQUALS "<>",
+ LESS "<", GREATER ">", LESS_EQUAL "<=", GREATER_EQUAL ">=",
+ UPLUS "+", PLUS "+", MINUS "-", UMINUS "-",
+ DIVIDE "/", MULTIPLY "*", STR_CONCAT "||")

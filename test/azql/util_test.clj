@@ -19,10 +19,3 @@
   (is (thrown? IllegalStateException (check-state false "message")))
   (is (nil? (check-argument true "message")))
   (is (nil? (check-state true "message"))))
-
-(deftest test-custom-flatten
-  (is (= [1 2 3] (eager-filtered-flatten [[[1] [[2] 3]]])))
-  (is (= [1 2 3 4 5] (eager-filtered-flatten [[1] [2 [3] [[[4]]]] 5] (constantly true))))
-  (is (= [] (eager-filtered-flatten [] (constantly true))))
-  (is (= [1 [2 [3]] 4] (eager-filtered-flatten [[[1]] ^:x [2 [3]] [4]] #(not (:x (meta %)))))))
-  
