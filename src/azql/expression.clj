@@ -72,15 +72,14 @@
 
 (defn- map-style-expression?
   [m]
-  (and
-    (map? m)
-    (not (extends? SqlLike (class m)))))
+  (instance? clojure.lang.APersistentMap m))
 
 (defn- normalize-map-style-expression
   [m]
-  (if (empty? m)
-    (render-true)
-    (reduce conj-expression (map #(list* '= %) m))))
+  (case (count m)
+    0 (render-true)
+    1 (list* '= (first m))
+    (list* 'and (map #(list* '= %) m))))
 
 (defn prepare-macro-expression
   "Walks tree and replaces synonyms.
