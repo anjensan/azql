@@ -4,31 +4,32 @@
   (:require [clojure.java.jdbc :as jdbc]))
 
 (defn- as-table-or-subquery
-  "Converts value to table name or subquery.
-   Surrounds subquery with parentheses."
   [v]
   (cond
    (keyword? v) v
    (string? v) (keyword v)
    :else (compose-sql (parentheses v))))
 
-(defn render-alias?
-  "Checks whether it is necessary to render alias of table/column."
-  [alias table-or-column]
+(defndialect render-table-alias?
+  [alias table]
+  (not= alias table))
+
+(defndialect render-field-alias?
+  [alias field]
   (not
     (or
-      (= alias table-or-column)
+      (= alias field)
       (surrogate-alias? alias))))
 
 (defndialect render-table
   [[alias table]]
   (let [t (as-table-or-subquery table)]
-    (if (render-alias? alias t) (compose-sql t AS alias) t)))
+    (if (render-table-alias? alias t) (compose-sql t AS alias) t)))
 
 (defndialect render-field
   [[alias nm]]
   (let [e (render-expression nm)]
-    (if (render-alias? alias nm) (compose-sql e AS alias) e)))
+    (if (render-field-alias? alias nm) (compose-sql e AS alias) e)))
 
 (defndialect render-fields
   [{:keys [fields]}]

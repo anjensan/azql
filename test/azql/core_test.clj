@@ -178,8 +178,6 @@
     (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM A"
          (select (from (table :A)))
-         "SELECT * FROM (SELECT * FROM A)"
-         (select (from (select (from :A))))
          "SELECT * FROM (SELECT * FROM A) AS a"
          (select (from :a (select (from :A))))
          "SELECT x FROM (SELECT x FROM A) AS a"
@@ -189,7 +187,10 @@
          "SELECT * FROM (SELECT * FROM A) AS a INNER JOIN (SELECT * FROM B) AS b ON (x = y)"
          (select
           (from :a (select (from :A)))
-          (join :b (select (from :B)) (= :x :y)))))
+          (join :b (select (from :B)) (= :x :y))))
+    (is (re-matches 
+          #"SELECT \* FROM \(SELECT x FROM A\) AS __\d+"
+          (:sql (sql* (select (from (select [:x] (from :A)))))))))
 
   (testing "test operators `exists`, `any`, `all`"
     (are [s z] (= s (:sql (sql* z)))

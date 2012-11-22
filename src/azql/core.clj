@@ -169,8 +169,8 @@
   "Adds join section to query."
   [{:keys [tables joins] :as query} type alias table cond]
   (check-argument (query? query) "Firt argument must be a Query")
-  (let [a (as-alias alias)
-        t (unwrap-single-table table)]
+  (let [t (unwrap-single-table table)
+        a (as-alias (or alias t))]
     (check-state (not (contains? tables a)) (str "Relation already has table " a))
     (assoc
       query
@@ -181,7 +181,7 @@
  [join-name join-key]
  (defn join-name
    ([relation alias table] (join* relation join-key alias table nil))
-   ([relation table] (join* relation join-key table table nil)))
+   ([relation table] (join* relation join-key nil table nil)))
  from nil, join-cross :cross)
 
 (do-template
@@ -191,7 +191,7 @@
       `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
    ([relation table cond]
      `(let [table# ~table]
-        (join* ~relation ~join-key table# table# ~(prepare-macro-expression cond)))))
+        (join* ~relation ~join-key nil table# ~(prepare-macro-expression cond)))))
  join-inner :inner, join :inner,
  join-right :right, join-left :left, join-full :full)
 
