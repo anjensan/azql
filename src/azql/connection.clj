@@ -20,7 +20,7 @@
                 :rollback (atom false)
                 :azql/dialect (guess-dialect (.getMetaData c)))}
         f)
-      (illegal-state "No global connection available."))))
+      (f))))
 
 (defmacro with-global-connection
   "Executes code in a scope of the global connection."

@@ -39,7 +39,7 @@
 
 (defrecord PrecompiledSql [content]
   SqlLike
-  (as-sql [this] (.content this)))
+  (as-sql [this] content))
 
 (do-template
   [v]
@@ -48,7 +48,7 @@
   Select Insert Update Delete)
 
 (defmethod print-method PrecompiledSql [^PrecompiledSql s ^Appendable w]
-  (print-method (.content s) w))
+  (.append w (interpolate-sql (.content s))))
 
 (declare fields)
 (declare fields*)
@@ -80,18 +80,17 @@
   (let [sargs (mapv ->SurrogatedArg args)
         sargs-args-map (into {} (map vector sargs args))]
     `(let [sqls# (atom {})
-           original# (fn ~args (select ~@body (sql*)))
+           original# (fn ~args (select ~@body (sql)))
            compile# (fn [] (apply original# ~sargs))]
        (defn ~name ~args
-         (with-recognized-dialect
-           (let [dialect# (current-dialect)]
-             (let [sql# (get @sqls# dialect#)]
-               (when-not sql#
-                 (swap! sqls# assoc dialect# (compile#))))
-             (let [sql# (get @sqls# dialect#)
-                   args# (:args sql#)]
-               (->PrecompiledSql
-                 (assoc sql# :args (replace ~sargs-args-map args#))))))))))
+         (let [dialect# (current-dialect)]
+           (let [sql# (get @sqls# dialect#)]
+             (when-not sql#
+               (swap! sqls# assoc dialect# (compile#))))
+           (let [sql# (get @sqls# dialect#)
+                 args# (:args sql#)]
+             (->PrecompiledSql
+               (assoc sql# :args (replace ~sargs-args-map args#)))))))))
 
 (defn- emit-raw-select
   [name args sql]

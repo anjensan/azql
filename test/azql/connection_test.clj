@@ -15,7 +15,7 @@
   (is (not (jdbc/find-connection)))
   (is (with-global-connection (jdbc/find-connection)))
   (close-global-connection)
-  (is (thrown? IllegalStateException (with-global-connection nil))))
+  (with-global-connection nil))
 
 (deftest test-ignore-scoped-connection
   (open-global-connection h2-database-connection)

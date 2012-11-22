@@ -71,7 +71,6 @@
   [f]
   (if (find @#'jdbc/*db* :azql/dialect)
     (f)
-    (let [d (or *dialect* (current-jdbc-connection-dialect))]
-      (check-state d "Can't recognize SQL dialect.")
-      (with-bindings* {#'jdbc/*db* (assoc @#'jdbc/*db* :azql/dialect d)}
-        f))))
+    (if-let [d (or *dialect* (current-jdbc-connection-dialect))]
+      (with-bindings* {#'jdbc/*db* (assoc @#'jdbc/*db* :azql/dialect d)} f)
+      (f))))
