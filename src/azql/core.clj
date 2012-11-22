@@ -18,22 +18,30 @@
   ([& args]
     (with-azql-context (apply sql* args))))
 
+(defprotocol Query
+  ;; dymmy method (see #CLJ-966)
+  (_ [_]))
+
 (defrecord Select
     [tables joins fields where
      group having order
      modifier offset limit]
+  Query
   SqlLike
   (as-sql [this] (as-sql (render-select this))))
 
 (defrecord Insert [table fields records]
+  Query
   SqlLike
   (as-sql [this] (as-sql (render-insert this))))
 
 (defrecord Delete [tables joins where]
+  Query
   SqlLike
   (as-sql [this] (as-sql (render-delete this))))
 
 (defrecord Update [table fields where]
+  Query
   SqlLike
   (as-sql [this] (as-sql (render-update this))))
 
@@ -68,6 +76,16 @@
   (emit-threaded-expression
     select*
     (list* (if (list? a) a `(fields ~a)) body)))
+
+(defn select?
+  "Checks if argument is select statement."
+  [q]
+  (and q (instance? Select q)))
+
+(defn query?
+  "Checks if argument is query statement (select, delete, update or insert)."
+  [q]
+  (and q (satisfies? Query q)))
 
 (register-subquery-symbol 'select)
 
@@ -149,11 +167,13 @@
 
 (defn join*
   "Adds join section to query."
-  [{:keys [tables joins] :as relation} type alias table cond]
+  [{:keys [tables joins] :as query} type alias table cond]
+  (check-argument (query? query) "Firt argument must be a Query")
   (let [a (as-alias alias)
         t (unwrap-single-table table)]
     (check-state (not (contains? tables a)) (str "Relation already has table " a))
-    (assoc relation
+    (assoc
+      query
       :tables (assoc tables a t)
       :joins (conj (vec joins) [a type cond]))))
 
@@ -177,9 +197,10 @@
 
 (defn fields*
   "Adds field list to query."
-  [s fd]
-  (check-argument (nil? (:fields s)) "Relation already has specified fields.")
-  (assoc s :fields fd))
+  [query fd]
+  (check-argument (query? query) "Firt argument must be a Query")
+  (check-argument (nil? (:fields query)) "Relation already has specified fields.")
+  (assoc query :fields fd))
 
 (defn- prepare-fields
   [fs]
@@ -192,13 +213,14 @@
 
 (defmacro fields
   "Adds field list to query, support expressions."
-  [s fd]
-  `(fields* ~s ~(prepare-fields fd)))
+  [query fd]
+  `(fields* ~query ~(prepare-fields fd)))
 
 (defn where*
   "Adds 'where' condition to query"
-  [{w :where :as s} c]
-  (assoc s :where (conj-expression w c)))
+  [{w :where :as query} c]
+  (check-argument (query? query) "Firt argument must be a Query")
+  (assoc query :where (conj-expression w c)))
 
 (defmacro where
   "Adds 'where' condition to query, support expressions."
@@ -209,11 +231,13 @@
   "Adds 'order by' section to query."
   ([relation column] (order* relation column nil))
   ([{order :order :as relation} column dir]
-     (check-argument
+    (check-argument (select? relation) "Firt argument must be a Select")
+    (check-argument
       (contains? #{:asc :desc nil} dir)
       (str "Invalid sort direction " dir))
-     (assoc relation
-       :order (cons [column dir] order))))
+    (assoc
+      relation
+      :order (cons [column dir] order))))
 
 (defmacro order
   "Adds 'order by' section to query."
@@ -223,15 +247,16 @@
 (defn group
   "Adds 'group by' section to query."
   [{g :group :as relation} fields]
-  (check-state (nil? g) (str "Relation already has grouping " g))
+  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-argument (nil? g) (str "Relation already has grouping " g))
   (let [f (if (sequential? fields) fields [fields])]
-    (assoc relation
-      :group f)))
+    (assoc relation :group f)))
 
 (defn modifier
   "Attaches a modifier to the query. Modifier should be keyword or raw sql."
   [{cm :modifier :as relation} m]
-  (check-state (nil? cm) (str "Relation already has modifier " cm))
+  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-argument (nil? cm) (str "Relation already has modifier " cm))
   (check-argument (or (sql? m) (#{:distinct :all} m))
                   "Invalid modifier, expected :distinct, :all or raw sql.")
   (assoc relation :modifier m))
@@ -239,19 +264,22 @@
 (defn limit
   "Limits number of rows."
   [{ov :limit :as relation} v]
+  (check-argument (select? relation) "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
   "Adds an offset to query."
   [{ov :offset :as relation} v]
+  (check-argument (select? relation) "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 
 (defn having*
   "Adds 'having' condition to query."
-  [{h :having :as s} c]
-  (assoc s :having (conj-expression h c)))
+  [{h :having :as relation} c]
+  (check-argument (select? relation) "Firt argument must be a Select")
+  (assoc relation :having (conj-expression h c)))
 
 (defmacro having
   "Adds 'having' condition to query, supports macro expressions"
