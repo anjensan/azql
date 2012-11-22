@@ -31,10 +31,10 @@
   "Opens global connection."
   [db-spec]
   (alter-var-root
-   #'global-connection
-   (fn [^java.sql.Connection c]
-     (when c (.close c))
-     (when db-spec (#'jdbc/get-connection db-spec)))))
+    #'global-connection
+    (fn [^java.sql.Connection c]
+      (when c (.close c))
+      (when db-spec (#'jdbc/get-connection db-spec)))))
 
 (defn close-global-connection
   "Closes global connection."

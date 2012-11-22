@@ -41,9 +41,9 @@
 (defndialect render-join-type
   [jt]
   (get
-   {:left LEFT_OUTER_JOIN, :right RIGHT_OUTER_JOIN,
-    :full FULL_OUTER_JOIN, :inner INNER_JOIN, :cross CROSS_JOIN}
-   jt jt))
+    {:left LEFT_OUTER_JOIN, :right RIGHT_OUTER_JOIN,
+     :full FULL_OUTER_JOIN, :inner INNER_JOIN, :cross CROSS_JOIN}
+    jt jt))
 
 (defndialect render-from
   [{:keys [tables joins]}]
@@ -93,8 +93,9 @@
   [{:keys [limit offset]}]
   (if (or limit offset)
     (let [lim (arg (if limit limit (max-limit-value)))]
-      (compose-sql LIMIT lim
-       (if offset (compose-sql OFFSET offset) NONE)))
+      (compose-sql
+        LIMIT lim
+        (if offset (compose-sql OFFSET offset) NONE)))
     NONE))
 
 (defndialect render-group
@@ -164,7 +165,7 @@
 (defndialect render-update-fields
   [{:keys [fields]}]
   (comma-list
-   (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression c))) fields)))
+    (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression c))) fields)))
 
 ; TODO: add joins
 (defndialect render-update

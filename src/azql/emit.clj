@@ -226,8 +226,9 @@
 (defn as-alias-safe
   "Interprets value as column/table alias."
   [n]
-  (check-argument (keyword-or-string? n)
-                  "Invalid alias, extected keyword or string.")
+  (check-argument
+    (keyword-or-string? n)
+    "Invalid alias, extected keyword or string.")
   (keyword n))
 
 (def surrogate-alias-counter (atom 0))
@@ -335,20 +336,20 @@
 ; standard keywords
 
 (do-template
- [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
+  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
 
- SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON, AND, OR, NOT, NULL, AS,
- IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
- COUNT, MIN, MAX, AVG, SUM, INSERT, DELETE, VALUES, INTO, UPDATE,
- LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
- CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
- EXISTS, NOT_EXISTS, ALL, ANY, SOME,
- LIKE, ESCAPE)
+  SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON, AND, OR, NOT, NULL, AS,
+  IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
+  COUNT, MIN, MAX, AVG, SUM, INSERT, DELETE, VALUES, INTO, UPDATE,
+  LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
+  CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
+  EXISTS, NOT_EXISTS, ALL, ANY, SOME,
+  LIKE, ESCAPE)
 
 (do-template
- [kname value] (def kname (raw value))
+  [kname value] (def kname (raw value))
 
- ASTERISK "*", QMARK "?", EQUALS "=", NOT_EQUALS "<>",
- LESS "<", GREATER ">", LESS_EQUAL "<=", GREATER_EQUAL ">=",
- UPLUS "+", PLUS "+", MINUS "-", UMINUS "-",
- DIVIDE "/", MULTIPLY "*", STR_CONCAT "||")
+  ASTERISK "*", QMARK "?", EQUALS "=", NOT_EQUALS "<>",
+  LESS "<", GREATER ">", LESS_EQUAL "<=", GREATER_EQUAL ">=",
+  UPLUS "+", PLUS "+", MINUS "-", UMINUS "-",
+  DIVIDE "/", MULTIPLY "*", STR_CONCAT "||")

@@ -19,13 +19,14 @@
     (with-azql-context (apply sql* args))))
 
 (defprotocol Query
-  ;; dymmy method (see #CLJ-966)
-  (_ [_]))
+  (_dummy "Dummy method, see #CLJ-966" [_]))
+
+(ns-unmap *ns* '_dummy)
 
 (defrecord Select
-    [tables joins fields where
-     group having order
-     modifier offset limit]
+  [tables joins fields where
+   group having order
+   modifier offset limit]
   Query
   SqlLike
   (as-sql [this] (as-sql (render-select this))))
@@ -68,7 +69,7 @@
   "Creates empty select."
   ([] #azql.core.Select{})
   ([fields]
-     (-> (select*) (fields* fields))))
+    (-> (select*) (fields* fields))))
 
 (defmacro select
   "Creates new select."
@@ -114,7 +115,7 @@
   [name args sql]
   (let [args-map (into {} (map (juxt keyword identity) args))]
     `(defn ~name ~args
-      (->PrecompiledSql
+       (->PrecompiledSql
          (format-sql ~sql ~args-map)))))
 
 (defmacro defselect
@@ -185,15 +186,15 @@
  from nil, join-cross :cross)
 
 (do-template
- [join-name join-key]
- (defmacro join-name
+  [join-name join-key]
+  (defmacro join-name
    ([relation alias table cond]
-      `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
+     `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
    ([relation table cond]
      `(let [table# ~table]
         (join* ~relation ~join-key nil table# ~(prepare-macro-expression cond)))))
- join-inner :inner, join :inner,
- join-right :right, join-left :left, join-full :full)
+  join-inner :inner, join :inner,
+  join-right :right, join-left :left, join-full :full)
 
 (defn fields*
   "Adds field list to query."
@@ -297,7 +298,7 @@
   (assert (vector? vr))
   (assert (= 2 (count vr)))
   `(with-azql-context
-    (let [sp# (#'to-sql-params ~relation)]
+     (let [sp# (#'to-sql-params ~relation)]
        (jdbc/with-query-results ~v sp# ~@body))))
 
 (defn fetch-all
@@ -385,7 +386,7 @@
   [insert records]
   (let [records (if (map? records) [records] (seq records))]
     (assoc insert
-      :records (into (:records insert) records))))
+           :records (into (:records insert) records))))
 
 (defn delete*
   "Creates new delete statement."
@@ -414,7 +415,7 @@
   "Deletes records from a table."
   [& body]
   `(execute!
-    ~(emit-threaded-expression delete* body)))
+     ~(emit-threaded-expression delete* body)))
 
 (defn execute-insert!
   "Executes insert query.
@@ -429,13 +430,13 @@
    If a single record is inserted, returns map of the generated keys."
   [& body]
   `(execute-insert!
-    ~(emit-threaded-expression insert* body)))
+     ~(emit-threaded-expression insert* body)))
 
 (defmacro update!
   "Executes update statement."
   [& body]
   `(execute!
-    ~(emit-threaded-expression update* body)))
+     ~(emit-threaded-expression update* body)))
 
 (defn escape-like
   "Escapes 'LIKE' pattern. Replaces all '%' with '\\%' and '_' with '\\_'."

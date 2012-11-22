@@ -188,7 +188,7 @@
          (select
           (from :a (select (from :A)))
           (join :b (select (from :B)) (= :x :y))))
-    (is (re-matches 
+    (is (re-matches
           #"SELECT \* FROM \(SELECT x FROM A\) AS __\d+"
           (:sql (sql* (select (from (select [:x] (from :A)))))))))
 

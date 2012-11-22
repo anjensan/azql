@@ -155,8 +155,8 @@
   [s & args-and-body]
   (let [fn-name (symbol (str "operator-" (name s)))
         [d & r] (if (keyword? (first args-and-body))
-                args-and-body
-                (cons default-dialect args-and-body))]
+                  args-and-body
+                  (cons default-dialect args-and-body))]
     `(register-operator (quote ~s) ~d (fn ~fn-name ~@r))))
 
 (defn- emit-deffunction
@@ -201,10 +201,10 @@
 (defoperator =
   [a b]
   (parentheses
-   (cond
-    (nil? a) (compose-sql b IS_NULL)
-    (nil? b) (compose-sql a IS_NULL)
-    :else (compose-sql a EQUALS b))))
+    (cond
+      (nil? a) (compose-sql b IS_NULL)
+      (nil? b) (compose-sql a IS_NULL)
+      :else (compose-sql a EQUALS b))))
 
 (defoperator not=
   [a b]
@@ -260,24 +260,24 @@
 (defoperator not-in?
   [a b]
   (cond
-   (empty? b) (render-true)
-   (extends? SqlLike (class b)) (parentheses a NOT_IN (parentheses b))
-   :else (parentheses a NOT_IN (parentheses (comma-list b)))))
+    (empty? b) (render-true)
+    (extends? SqlLike (class b)) (parentheses a NOT_IN (parentheses b))
+    :else (parentheses a NOT_IN (parentheses (comma-list b)))))
 
 (defoperator in?
   [a b]
   (cond
-   (empty? b) (render-false)
-   (extends? SqlLike (class b)) (parentheses a IN (parentheses b))
-   :else (parentheses a IN (parentheses (comma-list b)))))
+    (empty? b) (render-false)
+    (extends? SqlLike (class b)) (parentheses a IN (parentheses b))
+    :else (parentheses a IN (parentheses (comma-list b)))))
 
 (defoperator count
   ([r] (compose-sql COUNT NOSP (parentheses r)))
   ([d r]
-     (case d
-       :distinct (compose-sql COUNT (parentheses DISTINCT r))
-       nil [COUNT (parentheses r)]
-       (illegal-argument "Unknown modifier " d))))
+    (case d
+      :distinct (compose-sql COUNT (parentheses DISTINCT r))
+      nil [COUNT (parentheses r)]
+      (illegal-argument "Unknown modifier " d))))
 
 (defoperator max
   [x]
@@ -322,8 +322,9 @@
 (defoperator starts?
   [a b]
   (check-argument (string? b) "Pattern should be string.")
-  (parentheses a LIKE (str (escape-like-pattern b) "%")
-   ESCAPE (like-pattern-escaping-sql)))
+  (parentheses
+    a LIKE (str (escape-like-pattern b) "%")
+    ESCAPE (like-pattern-escaping-sql)))
 
 (defoperator str
   [x & r] (parentheses* (interpose STR_CONCAT (cons x r))))
