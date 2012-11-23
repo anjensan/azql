@@ -129,9 +129,10 @@
                 (get mp op)
                 (create-operator-multi op))]
           (.addMethod m dialect f)
-          (assoc mp op m)))))
+          (assoc mp op m))))
+    (get operator-rendering-fns op))
   ([op f]
-    (register-operator op :default f)))
+    (register-operator op default-dialect f)))
 
 (defn render-operator
   "Renders one function. First argument is a function symbol. Rest is args."
@@ -328,3 +329,24 @@
 
 (defoperator str
   [x & r] (parentheses* (interpose STR_CONCAT (cons x r))))
+
+(defn- render-case-ext
+  [v cnds]
+  (compose-sql
+    CASE v
+    (compose-sql*
+      (map
+        (fn [[a b]] (compose-sql WHEN a THEN b))
+        (partition 2 cnds)))
+    (if (odd? (count cnds))
+      (compose-sql ELSE (last cnds))
+      NONE)
+    END))
+
+(defoperator case
+  [v & cnds]
+  (render-case-ext v cnds))
+
+(defoperator cond
+  [& cnds]
+  (render-case-ext NONE cnds))

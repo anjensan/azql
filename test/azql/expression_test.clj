@@ -86,3 +86,19 @@
           "f1()" ['f1]
           "f2(?)" ['f2 1]
           "Fx3()" ['f3])))
+
+
+(deftest test-case
+  (testing "test 'case' operator"
+    (are [a b] (= a (:sql (sql* (render-expression b))))
+         "CASE x WHEN a THEN b END" ['case :x :a :b]
+         "CASE x WHEN a THEN b ELSE c END" ['case :x :a :b :c]
+         "CASE ? WHEN ? THEN ? WHEN ? THEN ? ELSE ? END" ['case nil nil nil nil nil nil]))
+  (testing "test 'cond' operator"
+    (are [a b] (= a (:sql (sql* (render-expression b))))
+         "CASE WHEN a THEN b END" ['cond :a :b]
+         "CASE WHEN x THEN a WHEN b THEN c END" ['cond :x :a :b :c]
+         "CASE WHEN x THEN a ELSE b END" ['cond :x :a :b]
+         "CASE WHEN (a = b) THEN c ELSE d END" ['cond ['= :a :b] :c :d]
+         "CASE WHEN (a IS NULL) THEN c ELSE d END" ['cond ['= :a nil] :c :d]
+         "CASE WHEN ? THEN ? WHEN ? THEN ? ELSE ? END" ['cond nil nil nil nil nil])))
