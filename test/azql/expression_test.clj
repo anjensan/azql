@@ -43,7 +43,8 @@
          '[+ [sin 1] [cos :x]] '(+ (sin 1) (cos :x))
          '[= :x 1] {:x 1}
          '[and [= :a :b] [= 1 2]] (array-map :a :b, 1 2)
-         '[or [= :x :y] [= 1 2]] '(or {:x :y} {1 2}))))
+         '[or [= :x :y] [= 1 2]] '(or {:x :y} {1 2})
+         '[= :x 3] '(= :x (clojure.core/+ 1 2)))))
 
 (deftest test-null-aware-comparasions
   (testing "test null-aware comparasions"

@@ -64,8 +64,8 @@
   [form]
   (when (seq? form)
     (let [f (first form)]
-      (and
-        (not (namespace f))
+      (or
+        (namespace f)
         (contains? subquery-symbols (first form))))))
 
 (declare conj-expression)
