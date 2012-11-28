@@ -197,12 +197,18 @@
 (def RIGHT_PAREN (raw ")"))
 (def COMMA (raw ","))
 
+(defn remove-parentheses
+  "Removes parenthesis."
+  [e]
+  (or (::without-parentheses (meta e)) e))
+
 (defn parentheses
   "Surrounds token with parentheses."
   ([e]
-    (with-meta
-      (compose-sql LEFT_PAREN NOSP e NOSP RIGHT_PAREN)
-      {::without-parentheses e}))
+    (let [e (remove-parentheses e)]
+      (with-meta
+        (compose-sql LEFT_PAREN NOSP e NOSP RIGHT_PAREN)
+        {::without-parentheses e})))
   ([e & r]
     (parentheses (compose-sql* e r))))
 
@@ -210,18 +216,15 @@
   "Surrounds token with parentheses.
    Last arg treated as a sequence (similar to `list*`)."
   [& e]
-  (parentheses (apply compose-sql* e)))
-
-(defn remove-parentheses
-  "Removes parenthesis."
-  [e]
-  (or (::without-parentheses (meta e)) e))
+  (parentheses (apply compose-sql* (remove-parentheses e))))
 
 (defn comma-list
   "Returns values separated by comma."
   [values]
-  (compose-sql*
-    (interpose (compose-sql NOSP COMMA) (map remove-parentheses values))))
+  (if (== 1 (count values))
+    (first values)
+    (compose-sql*
+      (interpose (compose-sql NOSP COMMA) values))))
 
 (defn as-alias-safe
   "Interprets value as column/table alias."

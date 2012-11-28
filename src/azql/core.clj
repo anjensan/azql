@@ -18,9 +18,6 @@
   ([& args]
     (with-azql-context (apply sql* args))))
 
-(defprotocol Query
-  (_dummy "Dummy method, see #CLJ-966" [_]))
-
 (ns-unmap *ns* '_dummy)
 
 (defrecord Select
@@ -52,7 +49,8 @@
   SqlLike
   (as-sql [this] (as-sql (render-combined this))))
 
-(defrecord PrecompiledSql [content]
+(defrecord PrecompiledSelect [content]
+  Query
   SqlLike
   (as-sql [this] content))
 
@@ -62,7 +60,7 @@
     (.append w (interpolate-sql s)))
   Select Insert Update Delete CombinedQuery)
 
-(defmethod print-method PrecompiledSql [^PrecompiledSql s ^Appendable w]
+(defmethod print-method PrecompiledSelect [^PrecompiledSelect s ^Appendable w]
   (.append w (interpolate-sql (.content s))))
 
 (declare fields*)
@@ -99,14 +97,14 @@
                (swap! sqls# assoc dialect# (compile#))))
            (let [sql# (get @sqls# dialect#)
                  args# (:args sql#)]
-             (->PrecompiledSql
+             (->PrecompiledSelect
                (assoc sql# :args (replace ~sargs-args-map args#)))))))))
 
 (defn- emit-raw-select
   [name args sql]
   (let [args-map (into {} (map (juxt keyword identity) args))]
     `(defn ~name ~args
-       (->PrecompiledSql
+       (->PrecompiledSelect
          (format-sql ~sql ~args-map)))))
 
 (defmacro defselect
@@ -430,10 +428,15 @@
       (update* t t)))
   ([alias table] (->Update [alias table] nil nil)))
 
-(defn setf
+(defn setf*
   "Adds field to update statement."
   [query fname value]
   (assoc query :fields (assoc (:fields query) fname value)))
+
+(defmacro setf
+  "Adds field to update statement."
+  [query fname value]
+  `(setf* ~query ~fname ~(prepare-macro-expression value)))
 
 (defmacro delete!
   "Deletes records from a table."

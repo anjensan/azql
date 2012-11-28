@@ -3,12 +3,24 @@
   (:require [clojure.set :as cset])
   (:require [clojure.java.jdbc :as jdbc]))
 
+(defprotocol Query
+  (_dummy "Dummy method, see #CLJ-966" [_]))
+
 (defn- as-table-or-subquery
   [v]
   (cond
    (keyword? v) v
    (string? v) (keyword v)
    :else (compose-sql (parentheses v))))
+
+(defn- sql-atom?
+  [x]
+  (not (or (sql? x) (satisfies? Query x))))
+
+(defndialect render-expression-or-subselect
+  [e]
+  (let [r (render-expression e)]
+    (if (sql-atom? e) r (parentheses r))))
 
 (defndialect render-table-alias?
   [alias table]
@@ -28,7 +40,7 @@
 
 (defndialect render-field
   [[alias nm]]
-  (let [e (render-expression nm)]
+  (let [e (render-expression-or-subselect nm)]
     (if (render-field-alias? alias nm) (compose-sql e AS alias) e)))
 
 (defndialect render-fields
@@ -165,9 +177,8 @@
 (defndialect render-update-fields
   [{:keys [fields]}]
   (comma-list
-    (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression c))) fields)))
+    (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression-or-subselect c))) (reverse fields))))
 
-; TODO: add joins
 (defndialect render-update
   [{t :table :as query}]
   (compose-sql

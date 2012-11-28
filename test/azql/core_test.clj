@@ -187,7 +187,11 @@
          "SELECT * FROM (SELECT * FROM A) AS a INNER JOIN (SELECT * FROM B) AS b ON (x = y)"
          (select
           (from :a (select (from :A)))
-          (join :b (select (from :B)) (= :x :y))))
+          (join :b (select (from :B)) (= :x :y)))
+         "SELECT (SELECT b FROM B WHERE (a = c)) FROM A"
+         (select [(select [:b] (from :B) (where {:a :c}))] (from :A))
+         "SELECT a, (SELECT b FROM B WHERE (a = c)) AS c FROM A"
+         (select {:a :a, :c (select [:b] (from :B) (where {:a :c}))} (from :A)))
     (is (re-matches
           #"SELECT \* FROM \(SELECT x FROM A\) AS __\d+"
           (:sql (sql* (select (from (select [:x] (from :A)))))))))
@@ -273,12 +277,17 @@
          "(SELECT a FROM A) UNION ALL (SELECT a FROM B)"
          (union (select [:a] (from :A)) (modifier :all) (select [:a] (from :B)))
          "(SELECT a FROM A) UNION (SELECT a FROM B) ORDER BY a"
-         (union (select [:a] (from :A)) (select [:a] (from :B)) (order :a))))
+         (union (select [:a] (from :A)) (select [:a] (from :B)) (order :a))
+         "((SELECT * FROM A) UNION (SELECT * FROM B)) UNION ALL (SELECT * FROM C)"
+         (union (union (table :A) (table :B)) (modifier :all) (table :C))
+
+         "(SELECT * FROM A) UNION ((SELECT * FROM B) UNION ALL (SELECT * FROM C))"
+         (union (table :A) (union (table :B) (modifier :all) (table :C)))))
 
   (testing "test intersect"
     (are [s z] (= s (:sql (sql* z)))
          "SELECT * FROM (SELECT a FROM T)"
-         (union (select [:a] (from "T")))
+         (intersect (select [:a] (from "T")))
          "(SELECT a FROM A) INTERSECT (SELECT a FROM B)"
          (intersect (select [:a] (from :A)) (select [:a] (from :B)))))
 
@@ -288,3 +297,48 @@
          (except (select [:a] (from "T")))
          "(SELECT a FROM A) EXCEPT (SELECT a FROM B)"
          (except (select [:a] (from :A)) (select [:a] (from :B))))))
+
+(deftest test-delete
+  (testing "delete statement"
+    (are [s z] (= s (:sql (sql* z)))
+         "DELETE FROM X"
+         (-> (delete*) (from :X))
+         "DELETE FROM X WHERE (id = ?)"
+         (-> (delete*) (from :X) (where {:id 1}))
+         "DELETE FROM X INNER JOIN Y ON (a = b) WHERE (id = ?)"
+         (-> (delete*) (from :X) (join :Y {:a :b}) (where {:id 1}))
+         "DELETE FROM X AS x INNER JOIN Y AS y ON (x.a = y.b) WHERE (id = ?)"
+         (-> (delete*) (from :x :X) (join :y :Y {:x.a :y.b}) (where {:id 1})))))
+
+(deftest test-update
+  (testing "update statement"
+    (are [s z] (= s (:sql (sql* z)))
+         "UPDATE X SET a = ? WHERE (id = ?)"
+         (-> (update* :X) (setf :a 1) (where {:id 1}))
+         "UPDATE X SET a = b, SET b = a WHERE (id = ?)"
+         (-> (update* :X) (setf :a :b) (setf :b :a) (where {:id 1}))
+         "UPDATE X SET c = (c + ?) WHERE (id IN (?, ?, ?))"
+         (-> (update* :X) (setf :c (+ :c 1)) (where (in? :id [1 2 3])))
+         "UPDATE X SET x = (SELECT t FROM T WHERE (T.a = X.b))"
+         (-> (update* :X) (setf :x (select [:t] (from :T) (where {:T.a :X.b})))))))
+
+(deftest test-insert
+  (testing "insert statement"
+    (are [s z] (= s (:sql (sql* z)))
+         "INSERT INTO X (a, b) VALUES (?, ?)"
+         (-> (insert* :X) (values {:a 1, :b 2}))
+         "INSERT INTO X (a, b) VALUES (?, ?)"
+         (-> (insert* :X) (values [{:a 1, :b 2}, {:a 3, :b 4}])))
+         "INSERT INTO X (a, b) VALUES (?, ?)"
+         (-> (insert* :X) (values {:a 1, :b 2}) (values {:a 3, :b 4}))
+         "INSERT INTO X (a, b) VALUES (?, ?)"
+         (-> (insert* :X) (values {:a 1, :b 2}) (values {}))
+    (are [s z] (= s (:args (sql* z)))
+         [[1 3] [2 4]]
+         (-> (insert* :X) (values [{:a 1, :b 2}, {:a 3, :b 4}])))
+         [[1 3] [2 4]]
+         (-> (insert* :X) (values {:a 1, :b 2}) (values {:a 3, :b 4}))
+         [[1 nil] [nil 4]]
+         (-> (insert* :X) (values {:a 1}) (values {:b 4}))
+         [[nil nil] [1 2]]
+         (-> (insert* :X) (values [{} {:a 1 :b 2}]))))

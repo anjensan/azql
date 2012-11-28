@@ -76,12 +76,13 @@
 (deftest test-helpers
   (is (= "(? = ?)" (:sql (sql* (parentheses 1 '= 2)))))
   (is (= "(? = ?)" (:sql (sql* (parentheses* 1 ['=  2])))))
-  (is (= "((? = ?))" (:sql (sql* (parentheses (parentheses 1 '= 2))))))
+  (is (= "(? = ?)" (:sql (sql* (parentheses (parentheses 1 '= 2))))))
   (is (= "((?) = (?))" (:sql (sql* (parentheses (compose-sql (parentheses 1) '= (parentheses 2)))))))
   (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
   (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
-  (is (= "?, ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
-  (is (= "\"X\", \"Y\"" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)]))))))
+  (is (= "(?), ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
+  (is (= "(\"X\"), (\"Y\")" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)])))))
+  (is (= "XX" (:sql (sql* (comma-list [(raw "XX")]))))))
 
 (deftest test-surrogate-aliases
   (is (surrogate-alias? (generate-surrogate-alias)))

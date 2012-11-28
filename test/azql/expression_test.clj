@@ -24,7 +24,7 @@
     (are [a b] (= (apply ->Sql a) (sql* (render-expression b)))
          ["f()" nil] '(funfun)
          ["f(?)" [1]] '(funfun 1)
-         ["my-fun(? + ?, ?, fun(), fun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
+         ["my-fun((? + ?), ?, fun(), fun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
          ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
          ["(? || ? || ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
 
