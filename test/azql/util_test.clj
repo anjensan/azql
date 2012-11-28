@@ -16,6 +16,9 @@
 
 (deftest test-checks
   (is (thrown? IllegalArgumentException (check-argument false "message")))
+  (is (thrown? IllegalArgumentException (check-type 123 [CharSequence] "message")))
   (is (thrown? IllegalStateException (check-state false "message")))
   (is (nil? (check-argument true "message")))
-  (is (nil? (check-state true "message"))))
+  (is (nil? (check-state true "message")))
+  (is (nil? (check-type "str" [CharSequence] "message")))
+  (is (nil? (check-type "str" [Integer Object] "message"))))

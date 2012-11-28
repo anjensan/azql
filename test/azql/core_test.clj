@@ -259,3 +259,32 @@
   (is (not (single-table-select? (-> (table :X) (order :X)))))
   (is (not (single-table-select? (-> (table :X) (join-cross :T)))))
   (is (not (single-table-select? (-> (table "X") (limit 100))))))
+
+(deftest test-composed-queries
+
+  (testing "test union"
+    (are [s z] (= s (:sql (sql* z)))
+         "SELECT * FROM (SELECT a FROM T)"
+         (union (select [:a] (from "T")))
+         "SELECT * FROM (SELECT a FROM T) ORDER BY a"
+         (union (order :a) (select [:a] (from "T")))
+         "(SELECT a FROM A) UNION (SELECT a FROM B)"
+         (union (select [:a] (from :A)) (select [:a] (from :B)))
+         "(SELECT a FROM A) UNION ALL (SELECT a FROM B)"
+         (union (select [:a] (from :A)) (modifier :all) (select [:a] (from :B)))
+         "(SELECT a FROM A) UNION (SELECT a FROM B) ORDER BY a"
+         (union (select [:a] (from :A)) (select [:a] (from :B)) (order :a))))
+
+  (testing "test intersect"
+    (are [s z] (= s (:sql (sql* z)))
+         "SELECT * FROM (SELECT a FROM T)"
+         (union (select [:a] (from "T")))
+         "(SELECT a FROM A) INTERSECT (SELECT a FROM B)"
+         (intersect (select [:a] (from :A)) (select [:a] (from :B)))))
+
+  (testing "test intersect"
+    (are [s z] (= s (:sql (sql* z)))
+         "SELECT * FROM (SELECT a FROM T)"
+         (except (select [:a] (from "T")))
+         "(SELECT a FROM A) EXCEPT (SELECT a FROM B)"
+         (except (select [:a] (from :A)) (select [:a] (from :B))))))

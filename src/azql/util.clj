@@ -33,3 +33,26 @@
   [c msg]
   `(when (not ~c)
      (illegal-state ~msg)))
+
+(def ^:private subquery-symbols #{})
+
+(defn register-subquery-symbol
+  [s]
+  "Adds symbol to `subquery-symbols`."
+  (assert (not (namespace s)))
+  (alter-var-root #'subquery-symbols conj (symbol s)))
+
+(defn subquery-form?
+  "Checks is form is 'subquery'."
+  [form]
+  (when (seq? form)
+    (let [f (first form)]
+      (contains? subquery-symbols f))))
+
+(defmacro check-type
+  [val types & message]
+  (let [vs (gensym)]
+    `(let [~vs ~val]
+       (check-argument
+         (or ~@(map (fn [t] (list `instance? t vs)) types))
+         ~@message))))

@@ -174,3 +174,23 @@
     UPDATE (render-table t)
     (render-update-fields query)
     (render-where query)))
+
+(defndialect render-combine-type
+  [{ct :type m :modifier}]
+  (compose-sql
+    (get {:union UNION, :intersect INTERSECT, :except EXCEPT} ct ct)
+    (get {:all ALL, :distinct NONE, nil NONE} m m)))
+
+(defndialect render-combined
+  [{q :queries :as query}]
+  (check-argument (not (empty? q)) "No queries specified")
+  (compose-sql
+    (if (== 1 (count q))
+      (compose-sql SELECT '* FROM (parentheses (first q)))
+      (compose-sql
+        (compose-sql*
+          (interpose
+            (render-combine-type query)
+            (map parentheses q)))))
+    (render-order query)
+    (render-limit query)))

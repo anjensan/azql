@@ -51,25 +51,6 @@
     (illegal-argument "Illegal function name '" s "', extected symbol"))
   (expression-synonym s))
 
-(def ^:private subquery-symbols #{})
-
-(defn register-subquery-symbol
-  [s]
-  "Adds symbol to `subquery-symbols`."
-  (assert (not (namespace s)))
-  (alter-var-root #'subquery-symbols conj (symbol s)))
-
-(defn subquery-form?
-  "Checks is form is 'subquery'."
-  [form]
-  (when (seq? form)
-    (let [f (first form)]
-      (or
-        (namespace f)
-        (contains? subquery-symbols (first form))))))
-
-(declare conj-expression)
-
 (defn- map-style-expression?
   [m]
   (instance? clojure.lang.APersistentMap m))
@@ -88,7 +69,8 @@
   [e]
   (if (and
         (seq? e)
-        (not (subquery-form? e)))
+        (not (subquery-form? e))
+        (not (namespace (first e))))
     (let [f (canonize-operator-symbol (first e))]
       (when-not f
         (illegal-argument "Invalid expression '" e "', unknown operator."))

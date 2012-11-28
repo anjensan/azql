@@ -173,7 +173,7 @@
     (if (:batch (meta this))
       (batch-arg this)
       (illegal-argument "Can't convert '" (vec this) "' to sql,
-                         probably you forget to add {:batch true} meta.")))
+                         probably you forgot to add {:batch true} meta.")))
 
   clojure.lang.IPersistentMap
   (as-sql [this]
@@ -344,7 +344,8 @@
   LEFT_OUTER_JOIN, RIGHT_OUTER_JOIN, FULL_OUTER_JOIN,
   CROSS_JOIN, INNER_JOIN, DISTINCT, ALL,LIMIT, OFFSET,
   EXISTS, NOT_EXISTS, ALL, ANY, SOME,
-  LIKE, ESCAPE, CASE, WHEN, THEN, END, ELSE)
+  LIKE, ESCAPE, CASE, WHEN, THEN, END, ELSE,
+  UNION, INTERSECT, EXCEPT)
 
 (do-template
   [kname value] (def kname (raw value))

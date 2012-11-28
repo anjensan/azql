@@ -88,7 +88,6 @@
           "f2(?)" ['f2 1]
           "Fx3()" ['f3])))
 
-
 (deftest test-case
   (testing "test 'case' operator"
     (are [a b] (= a (:sql (sql* (render-expression b))))

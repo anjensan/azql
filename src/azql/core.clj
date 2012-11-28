@@ -46,6 +46,12 @@
   SqlLike
   (as-sql [this] (as-sql (render-update this))))
 
+(defrecord CombinedQuery
+  [type queries order limit offset modifier]
+  Query
+  SqlLike
+  (as-sql [this] (as-sql (render-combined this))))
+
 (defrecord PrecompiledSql [content]
   SqlLike
   (as-sql [this] content))
@@ -54,7 +60,7 @@
   [v]
   (defmethod print-method v [s ^Appendable w]
     (.append w (interpolate-sql s)))
-  Select Insert Update Delete)
+  Select Insert Update Delete CombinedQuery)
 
 (defmethod print-method PrecompiledSql [^PrecompiledSql s ^Appendable w]
   (.append w (interpolate-sql (.content s))))
@@ -75,18 +81,8 @@
   "Creates new select."
   [a & body]
   (emit-threaded-expression
-    select*
+    `select*
     (list* (if (list? a) a `(fields ~a)) body)))
-
-(defn select?
-  "Checks if argument is select statement."
-  [q]
-  (and q (instance? Select q)))
-
-(defn query?
-  "Checks if argument is query statement (select, delete, update or insert)."
-  [q]
-  (and q (satisfies? Query q)))
 
 (register-subquery-symbol 'select)
 
@@ -169,7 +165,7 @@
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as query} type alias table cond]
-  (check-argument (query? query) "Firt argument must be a Query")
+  (check-type query [Select Delete] "Firt argument must be a Query")
   (let [t (unwrap-single-table table)
         a (as-alias (or alias t))]
     (check-state (not (contains? tables a)) (str "Relation already has table " a))
@@ -199,7 +195,7 @@
 (defn fields*
   "Adds field list to query."
   [query fd]
-  (check-argument (query? query) "Firt argument must be a Query")
+  (check-type query [Select Insert] "Firt argument must be a Query")
   (check-argument (nil? (:fields query)) "Relation already has specified fields.")
   (assoc query :fields fd))
 
@@ -220,7 +216,7 @@
 (defn where*
   "Adds 'where' condition to query"
   [{w :where :as query} c]
-  (check-argument (query? query) "Firt argument must be a Query")
+  (check-type query [Select Delete Update] "Firt argument must be a Query")
   (assoc query :where (conj-expression w c)))
 
 (defmacro where
@@ -232,7 +228,7 @@
   "Adds 'order by' section to query."
   ([relation column] (order* relation column nil))
   ([{order :order :as relation} column dir]
-    (check-argument (select? relation) "Firt argument must be a Select")
+    (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
     (check-argument
       (contains? #{:asc :desc nil} dir)
       (str "Invalid sort direction " dir))
@@ -248,7 +244,7 @@
 (defn group
   "Adds 'group by' section to query."
   [{g :group :as relation} fields]
-  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-type relation [Select] "Firt argument must be a Select")
   (check-argument (nil? g) (str "Relation already has grouping " g))
   (let [f (if (sequential? fields) fields [fields])]
     (assoc relation :group f)))
@@ -256,7 +252,7 @@
 (defn modifier
   "Attaches a modifier to the query. Modifier should be keyword or raw sql."
   [{cm :modifier :as relation} m]
-  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
   (check-argument (nil? cm) (str "Relation already has modifier " cm))
   (check-argument (or (sql? m) (#{:distinct :all} m))
                   "Invalid modifier, expected :distinct, :all or raw sql.")
@@ -265,27 +261,64 @@
 (defn limit
   "Limits number of rows."
   [{ov :limit :as relation} v]
-  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
   "Adds an offset to query."
   [{ov :offset :as relation} v]
-  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 
 (defn having*
   "Adds 'having' condition to query."
   [{h :having :as relation} c]
-  (check-argument (select? relation) "Firt argument must be a Select")
+  (check-type relation [Select] "Firt argument must be a Select")
   (assoc relation :having (conj-expression h c)))
 
 (defmacro having
   "Adds 'having' condition to query, supports macro expressions"
   [s c]
   `(having* ~s ~(prepare-macro-expression c)))
+
+(defn add-query
+  "Adds new select to combined query."
+  [combined query]
+  (check-type combined [CombinedQuery] "Firt argument must be a CombinedQuery")
+  ;(check-type query [Query] "Second argument must be a Query")
+  (assoc combined :queries (conj (vec (:queries combined)) query)))
+
+(defn combine*
+  [type]
+  (assoc #azql.core.CombinedQuery{} :type type))
+
+(defmacro combine
+  "Creates new select combined query."
+  [type & body]
+  (emit-threaded-expression
+    `combine*
+    (cons
+      (keyword type)
+      (map (fn [f] (if (subquery-form? f) `(add-query ~f) f)) body))))
+
+(defmacro union
+  "Creates union between queries."
+  [& body]
+  (list* `combine :union body))
+
+(defmacro intersect
+  "Creates intersection between queries."
+  [& body]
+  (list* `combine :intersect body))
+
+(defmacro except
+  "Creates union between queries."
+  [& body]
+  (list* `combine :except body))
+
+;; fetching
 
 (defn- to-sql-params
   [relation]
@@ -333,7 +366,6 @@
   [relation]
   (with-azql-context
     (jdbc/with-query-results* (to-sql-params relation) single-result)))
-
 
 ;; updates
 
@@ -415,7 +447,7 @@
   "Deletes records from a table."
   [& body]
   `(execute!
-     ~(emit-threaded-expression delete* body)))
+     ~(emit-threaded-expression `delete* body)))
 
 (defn execute-insert!
   "Executes insert query.
@@ -430,13 +462,13 @@
    If a single record is inserted, returns map of the generated keys."
   [& body]
   `(execute-insert!
-     ~(emit-threaded-expression insert* body)))
+     ~(emit-threaded-expression `insert* body)))
 
 (defmacro update!
   "Executes update statement."
   [& body]
   `(execute!
-     ~(emit-threaded-expression update* body)))
+     ~(emit-threaded-expression `update* body)))
 
 (defn escape-like
   "Escapes 'LIKE' pattern. Replaces all '%' with '\\%' and '_' with '\\_'."
