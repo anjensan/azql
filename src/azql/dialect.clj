@@ -5,8 +5,7 @@
 (def ^:const default-dialect ::sql92)
 (def dialects-hierarchy (make-hierarchy))
 
-(def ^{:doc "Current dialect. This option have highest priority." :dynamic true}
-      *dialect* nil)
+(def ^{:doc "Current dialect." :dynamic true} *dialect* nil)
 
 (defn parse-jdbc-protocol
   "Parses JDBC connection URL and returns protocol."

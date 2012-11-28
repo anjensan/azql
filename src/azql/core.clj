@@ -65,10 +65,7 @@
 (defmethod print-method PrecompiledSql [^PrecompiledSql s ^Appendable w]
   (.append w (interpolate-sql (.content s))))
 
-(declare fields)
 (declare fields*)
-(declare select)
-(declare select*)
 (declare from)
 
 (defn select*
@@ -287,7 +284,6 @@
   "Adds new select to combined query."
   [combined query]
   (check-type combined [CombinedQuery] "Firt argument must be a CombinedQuery")
-  ;(check-type query [Query] "Second argument must be a Query")
   (assoc combined :queries (conj (vec (:queries combined)) query)))
 
 (defn combine*
