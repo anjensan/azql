@@ -81,8 +81,6 @@
     `select*
     (list* (if (list? a) a `(fields ~a)) body)))
 
-(register-subquery-symbol 'select)
-
 (defrecord SurrogatedArg [symbol]
   SqlLike
   (as-sql [this] (arg this)))
@@ -138,8 +136,6 @@
   "Select all records from a table."
   [tname]
   (vary-meta (select (from tname)) assoc ::created-by-table-fn true))
-
-(register-subquery-symbol 'table)
 
 (defn- single-table-select?
   [q]
@@ -470,3 +466,13 @@
   "Escapes 'LIKE' pattern. Replaces all '%' with '\\%' and '_' with '\\_'."
   [^String pattern]
   (azql.expression/escape-like-pattern pattern))
+
+; query-forms
+(register-subquery-symbol `select)
+(register-subquery-symbol `select*)
+(register-subquery-symbol `table)
+(register-subquery-symbol `combine)
+(register-subquery-symbol `combine*)
+(register-subquery-symbol `union)
+(register-subquery-symbol `intersect)
+(register-subquery-symbol `except)

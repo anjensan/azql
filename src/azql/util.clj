@@ -18,21 +18,21 @@
   [v]
   `(let [v# ~v] (or (keyword? v#) (string? v#))))
 
-(defmacro illegal-argument [& msg]
-  `(throw (IllegalArgumentException. (str ~@msg))))
+(defmacro illegal-argument [& message]
+  `(throw (IllegalArgumentException. (str ~@message))))
 
-(defmacro illegal-state [& msg]
-  `(throw (IllegalStateException. (str ~@msg))))
+(defmacro illegal-state [& message]
+  `(throw (IllegalStateException. (str ~@message))))
 
 (defmacro check-argument
-  [c msg]
+  [c & message]
   `(when (not ~c)
-     (illegal-argument ~msg)))
+     (illegal-argument ~@message)))
 
 (defmacro check-state
-  [c msg]
+  [c & message]
   `(when (not ~c)
-     (illegal-state ~msg)))
+     (illegal-state ~@message)))
 
 (defmacro check-type
   [val types & message]
@@ -47,12 +47,12 @@
 (defn register-subquery-symbol
   [s]
   "Adds symbol to `subquery-symbols`."
-  (check-argument (not (namespace s)))
-  (alter-var-root #'subquery-symbols conj (symbol s)))
+  (check-argument (resolve s))
+  (alter-var-root #'subquery-symbols conj (resolve s)))
 
 (defn subquery-form?
   "Checks is form is 'subquery'."
   [form]
   (when (seq? form)
-    (let [f (first form)]
+    (when-let [f (resolve (first form))]
       (contains? subquery-symbols f))))
