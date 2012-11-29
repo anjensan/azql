@@ -89,14 +89,16 @@
            original# (fn ~args (select ~@body (sql)))
            compile# (fn [] (apply original# ~sargs))]
        (defn ~name ~args
-         (let [dialect# (current-dialect)]
-           (let [sql# (get @sqls# dialect#)]
-             (when-not sql#
-               (swap! sqls# assoc dialect# (compile#))))
-           (let [sql# (get @sqls# dialect#)
-                 args# (:args sql#)]
-             (->PrecompiledSelect
-               (assoc sql# :args (replace ~sargs-args-map args#)))))))))
+         (let [dialect# (current-dialect)
+               cached-sql# (get @sqls# dialect#)
+               sql# (if cached-sql#
+                      cached-sql#
+                      (let [new-sql# (compile#)]
+                        (swap! sqls# assoc dialect# new-sql#)
+                        new-sql#))
+               args# (:args sql#)]
+           (->PrecompiledSelect
+             (assoc sql# :args (replace ~sargs-args-map args#))))))))
 
 (defn- emit-raw-select
   [name args sql]
@@ -142,8 +144,9 @@
       (and
         (keyword-or-string? t)
         (= (name a) (name t))
-        ; contains only :tables & :joins
-        (== 2 (count (filter (complement nil?) (vals q))))))))
+        (=
+          #{:tables :joins}
+          (set (map key (filter #(-> % val nil? not) q))))))))
 
 (defn- unwrap-single-table
   [q]
@@ -387,7 +390,7 @@
                        (if-not (batch-arg? a)
                          (repeat cnt a)
                          (do
-                           (check-state 
+                           (check-state
                              (= cnt (count a))
                              "Batch argument vectors has different lengths.")
                            a)))
