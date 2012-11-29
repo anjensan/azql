@@ -18,8 +18,6 @@
   ([& args]
     (with-azql-context (apply sql* args))))
 
-(ns-unmap *ns* '_dummy)
-
 (defrecord Select
   [tables joins fields where
    group having order
@@ -109,7 +107,7 @@
 
 (defmacro defselect
   "Define new pre-rendered query.
-   Query is compiled once for each dialect."
+   Query compiled once for each dialect."
   [& name-args-body]
   (let [[name args & body]
         (if (string? (second name-args-body))
@@ -163,7 +161,7 @@
     (assoc
       query
       :tables (assoc tables a t)
-      :joins (conj (vec joins) [a type cond]))))
+      :joins (conj (or joins []) [a type cond]))))
 
 (do-template
  [join-name join-key]
@@ -278,7 +276,7 @@
   "Adds new select to combined query."
   [combined query]
   (check-type combined [CombinedQuery] "Firt argument must be a CombinedQuery")
-  (assoc combined :queries (conj (vec (:queries combined)) query)))
+  (assoc combined :queries (conj (or (:queries combined) []) query)))
 
 (defn combine*
   [type]
@@ -318,8 +316,8 @@
 (defmacro with-fetch
   "Executes a query & evaluates body with 'v' bound to seq of results."
   [[v relation :as vr] & body]
-  (assert (vector? vr))
-  (assert (= 2 (count vr)))
+  (check-argument (vector? vr))
+  (check-argument (= 2 (count vr)))
   `(with-azql-context
      (let [sp# (#'to-sql-params ~relation)]
        (jdbc/with-query-results ~v sp# ~@body))))
@@ -389,8 +387,9 @@
                        (if-not (batch-arg? a)
                          (repeat cnt a)
                          (do
-                           (check-state (= cnt (count a))
-                                        "Batch argument vectors has different lengths.")
+                           (check-state 
+                             (= cnt (count a))
+                             "Batch argument vectors has different lengths.")
                            a)))
                      arguments)]
       (apply map vector aseqs))

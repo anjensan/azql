@@ -6,6 +6,8 @@
 (defprotocol Query
   (_dummy "Dummy method, see #CLJ-966" [_]))
 
+(ns-unmap *ns* '_dummy)
+
 (defn- as-table-or-subquery
   [v]
   (cond

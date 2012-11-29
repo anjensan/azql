@@ -120,11 +120,12 @@
   "Unrolls tree of ComposedSqls to plain seq.
    This function is eager."
   ([csql]
-    (letfn [(rec
-              [acc item]
-              (if (instance? ComposedSql item)
-                (reduce rec acc (.sqls ^ComposedSql item))
-                (conj! acc item)))]
+    (letfn
+      [(rec
+         [acc item]
+         (if (instance? ComposedSql item)
+           (reduce rec acc (.sqls ^ComposedSql item))
+           (conj! acc item)))]
       (persistent! (rec (transient []) csql)))))
 
 ; rendering
