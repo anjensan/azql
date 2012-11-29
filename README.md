@@ -39,7 +39,7 @@ After macroexpansions:
       (select*)
       (fields* {:id :id, :name :name, :email :email})
       (join* nil :a :Users) ; nil means 'implicit cross join'
-      (where* ['= :a.role "ADMIN"])
+      (where* (list '= :a.role "ADMIN"))
       (fetch-all))
 
 Actual work is doing in `fetch-all` - this function executes query
@@ -70,13 +70,13 @@ Also you can use map-style conditions.
     :::clojure
     (select
       (from :Users)
-      (where {:first "Adrei", :last "Zhlobich"}))
+      (where {:first "Ivan", :last "Ivanov"}))
 
 The actual SQL is available trough the function `sql`:
 
     :::clojure
-    user> (sql (select (from :Users) (where (= :id 123))))
-    #azql.emit.Sql{:sql "SELECT * FROM \"Users\" WHERE (\"id\" = ?)", :args [123]}
+    user> (select (from :Users) (where {:id 123}) (sql))
+    #<"SELECT * FROM \"Users\" WHERE (\"id\" = ?)" 123>
 
 
 ### Joins
@@ -88,8 +88,8 @@ AZQL supports all types of joins:
       (from :a :A)                      ; table 'A', alias 'a', implicit cross join
       (join :b :B (= :a.x :b.y))        ; inner join
       (join-cross :c :B)                ; explicit cross join
-      (join-inner :D (= :a.x :D.y))
-      (join-full :e :E (and (= :e.x :a.x) (:e.y :D.y))))
+      (join-inner :D {:a.x :D.y})
+      (join-full :e :E {:e.x :a.x, :e.y :D.y)))
 
 The only restriction is that first join must be 'implicit cross join' (function `from`).
 It is possible to use vendor-specific joins:
