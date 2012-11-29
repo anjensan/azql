@@ -19,9 +19,7 @@ Add the following to your project.clj:
     [azql "0.1.0-SNAPSHOT"]
 
 
-## Usage
-
-### Basic examples
+### Basic usage
 
 AZQL syntax is quite similar to SQL:
 
@@ -42,16 +40,14 @@ After macroexpansions:
       (where* (list '= :a.role "ADMIN"))
       (fetch-all))
 
-Actual work is doing in `fetch-all` - this function executes query
-and converts `resultset-seq` into vector.
-
+Function `fetch-all` executes query and converts `resultset-seq` into vector.
 Library provides some alternatives:
 
 - `fetch-one` feches only one record, raises exception if more than one record returned;
 - `fetch-single` fetches only single value (one row and one column);
 - `with-fetch` executes arbitary code with opened `resultset-seq`;
 
-Example:
+Fox example:
 
     :::clojure
     (with-fetch [f (table :Users)]
@@ -61,8 +57,10 @@ It is possible to compose additional conditions:
 
     :::clojure
     (def all-users (table :Users))
-    (def banned-users (-> all-users (where (= :status "BANNED"))))
-    (def banned-admins (-> banned-users (where (= :role "ADMIN")))
+    (def banned-users
+      (-> all-users (where (= :status "BANNED"))))
+    (def banned-admins
+      (-> banned-users (where (= :role "ADMIN")))
     (println (fetch-all banned-admins))
 
 Also you can use map-style conditions.
@@ -72,12 +70,11 @@ Also you can use map-style conditions.
       (from :Users)
       (where {:first "Ivan", :last "Ivanov"}))
 
-The actual SQL is available using `sql`:
+Final SQL available using `sql` function:
 
     :::clojure
     user> (select (from :Users) (where {:id 123}) (sql))
     #<"SELECT * FROM \"Users\" WHERE (\"id\" = ?)" 123>
-
 
 ### Joins
 
@@ -165,6 +162,28 @@ Library supports limiting & offset:
       (where (like? :name "%Andrei%"))
       (limit 100)
       (offset 25))
+
+### Composed queries
+
+Unions:
+
+    :::clojure
+    (compose :union
+      (modifier :all)
+      (select
+        [:name]
+        (from :Users))
+      (select
+        [:name]
+        (from :Accounts)
+        (where {:status 1}))
+      (order :name))
+
+Library provides shortcuts `union`, `intersect` and `except`.
+
+	(union
+	  (intersect (table :A) (table :B))
+	  (except (table :C) (table :D)))
 
 ### CRUD
 
