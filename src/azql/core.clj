@@ -472,10 +472,8 @@
 
 ; query-forms
 (register-subquery-var #'select)
-(register-subquery-var #'select*)
 (register-subquery-var #'table)
 (register-subquery-var #'combine)
-(register-subquery-var #'combine*)
 (register-subquery-var #'union)
 (register-subquery-var #'intersect)
 (register-subquery-var #'except)

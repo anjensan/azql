@@ -8,15 +8,18 @@
 
 (deftest test-qnames
 
-  (testing "qnames is sql"
+  (testing
+    "qnames is sql"
     (is (sql? (qname :a))))
 
-  (testing "parse qnames"
+  (testing
+    "parse qnames"
     (is (= [:a :b] (parse-qname :a.b)))
     (is (= [:a] (parse-qname :a)))
     (is (= [:a :b :c] (parse-qname :a.b.c))))
 
-  (testing "emit qnames"
+  (testing
+    "emit qnames"
     (is (= "A.B" (emit-qname :A.B)))
     (is (= "A.b.C") (emit-qname :A.b.C))
     (with-dialect-naming-strategy
@@ -24,7 +27,8 @@
       (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
       (is (= "\"Abc\"" (emit-qname :Abc)))))
 
-  (testing "parse qualifier"
+  (testing
+    "parse qualifier"
     (is (nil? (qualifier :a)))
     (is (nil? (qualifier "A")))
     (is (nil? (qualifier "A-b")))
@@ -35,7 +39,8 @@
 
 (deftest test-sql
 
-  (testing "default implementations of SqlLike"
+  (testing
+    "default implementations of SqlLike"
     (are [s z] (= s (:sql (as-sql z)))
          "keyword" :keyword
          "symbol" 'symbol
@@ -47,7 +52,8 @@
          "?" (with-meta [1 2] {:batch true})
          "=" '=))
 
-  (testing "collect parameters"
+  (testing
+    "collect parameters"
     (are [a z] (= a (:args (as-sql z)))
          nil :keyword
          nil 'symbol
@@ -59,7 +65,8 @@
          ["str" 1] (parentheses (compose-sql* :x '= "str" 'AND [:y '<> 1]))
          [[1 2 3] 4] (parentheses (compose-sql :x (with-meta [1 2 3] {:batch true}) :y 4))))
 
-  (testing "test sql generation and formating"
+  (testing
+    "sql generation and formating"
     (are [sa z] (= (map->Sql sa) (apply sql* z))
          {:sql "\"A\" , \"B\" ?" :args [1]} [:A COMMA :B 1]
          {:sql "SELECT * FROM \"Table\"" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]

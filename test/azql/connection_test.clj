@@ -20,7 +20,7 @@
 (deftest test-ignore-scoped-connection
   (open-global-connection h2-database-connection)
   (is
-   (not
-    (identical?
-     (with-global-connection (jdbc/find-connection))
-     (jdbc/with-connection h2-database-connection (jdbc/find-connection))))))
+    (not
+      (identical?
+        (with-global-connection (jdbc/find-connection))
+        (jdbc/with-connection h2-database-connection (jdbc/find-connection))))))
