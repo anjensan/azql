@@ -42,17 +42,19 @@
          (or ~@(map (fn [t] (list `instance? t vs)) types))
          ~@message))))
 
-(def ^:private subquery-symbols #{})
+(def ^:private subquery-vars #{})
 
-(defn register-subquery-symbol
+(defn register-subquery-var
   [s]
-  "Adds symbol to `subquery-symbols`."
-  (check-argument (resolve s))
-  (alter-var-root #'subquery-symbols conj (resolve s)))
+  "Adds var to 'subquery-vars'."
+  (check-argument (var? s))
+  (alter-var-root #'subquery-vars conj s))
 
 (defn subquery-form?
-  "Checks is form is 'subquery'."
-  [form]
-  (when (seq? form)
-    (when-let [f (resolve (first form))]
-      (contains? subquery-symbols f))))
+  "Checks is form is 'subquery'. Should only be used in macros."
+  ([ns form]
+    (when (seq? form)
+      (when-let [s (first form)]
+        (contains? subquery-vars (resolve ns s)))))
+  ([form]
+    (subquery-form? *ns* form)))

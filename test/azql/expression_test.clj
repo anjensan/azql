@@ -28,6 +28,7 @@
          ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
          ["(? || ? || ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
 
+
 (deftest test-prepare-macro-expr
   (testing "convert macro form to expr-tree"
     (are [a b] (= a (eval (prepare-macro-expression b)))

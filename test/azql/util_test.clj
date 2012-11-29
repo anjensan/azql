@@ -22,3 +22,11 @@
   (is (nil? (check-state true "message")))
   (is (nil? (check-type "str" [CharSequence] "message")))
   (is (nil? (check-type "str" [Integer Object] "message"))))
+
+(def someform)
+(register-subquery-var #'someform)
+
+(deftest test-subquery-form
+  (is (not #=(subquery-form? (seq [1 2 3]))))
+  (is #=(subquery-form? (someform 1 2)))
+  (ns-unmap *ns* 'someform))
