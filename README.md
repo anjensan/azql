@@ -47,9 +47,9 @@ and converts `resultset-seq` into vector.
 
 Library provides some alternatives:
 
-- `fetch-one` feches only one record, raises exception if more than one record is returened
-- `fetch-single` fetches only single value (one row and one column)
-- `with-fetch` executes arbitary code with opened `resultset-seq`
+- `fetch-one` feches only one record, raises exception if more than one record returned;
+- `fetch-single` fetches only single value (one row and one column);
+- `with-fetch` executes arbitary code with opened `resultset-seq`;
 
 Example:
 
@@ -57,7 +57,7 @@ Example:
     (with-fetch [f (table :Users)]
       (reduce + (map :rating f)))
 
-It is possible to compose additional where's:
+It is possible to compose additional conditions:
 
     :::clojure
     (def all-users (table :Users))
@@ -72,7 +72,7 @@ Also you can use map-style conditions.
       (from :Users)
       (where {:first "Ivan", :last "Ivanov"}))
 
-The actual SQL is available trough the function `sql`:
+The actual SQL is available using `sql`:
 
     :::clojure
     user> (select (from :Users) (where {:id 123}) (sql))
@@ -111,9 +111,6 @@ You can use ordering:
       (order :field2 :desc)
       (order (+ :x :y) :asc))
 
-It will produce 'SELECT * FROM "A" ORDER BY ("x" + "y") ASC, "field2" DESC, "field1"'.
-
-
 ### Grouping
 
 AZQL supports grouping:
@@ -133,7 +130,12 @@ Library supports subqueries:
 
     :::clojure
     (def all-users (select (from :Users)))
-    (def all-active-users (select (from all-users) (where (= :status "ACTIVE"))))
+
+    (def all-active-users
+      (select
+      (from all-users)
+      (where (= :status "ACTIVE"))))
+
     (fetch-all all-active-users)
 
 
@@ -142,20 +144,20 @@ ALL, ANY and SOME are supported also.
     :::clojure
     (select
       (from :u :Users)
-      (where (= :u.id (any (select [:id] (from :ActiveUsers)))))
+      (where {:u.id (any :id (table :ActiveUsers))}))
 
-Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select'.
+Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select' & 'table'.
 So, you must use 'select' in you subqueries or pass them as a value. Example:
 
     :::clojure
-    (let [sq (fields [:id] (table :ActiveUsers))]
+    (let [sq (fields (table :ActiveUsers) [:id])]
       (select
         (from :u :Users)
         (where (= :u.id (any sq)))))
 
 ### Limit and offest
 
-Library supports limiting of results (with offset):
+Library supports limiting & offset:
 
     :::clojure
     (select
@@ -192,17 +194,6 @@ Delete:
 
     :::clojure
     (delete! :table (where (= :id 1)))
-
-
-### Custom dialects
-
-TODO
-
-
-### Raw queries
-
-TODO
-
 
 ### License
 
