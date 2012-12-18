@@ -16,7 +16,7 @@ Main goals of this project:
 Add the following to your project.clj:
 
     :::clojure
-    [azql "0.1.0-SNAPSHOT"]
+    [azql "0.1.0"]
 
 
 ### Basic usage
