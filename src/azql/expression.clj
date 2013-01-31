@@ -16,21 +16,17 @@
   (check-argument (nil? (:fields q)) "Relation already has fields.")
   (assoc q :fields {(as-alias-safe f) f}))
 
-(def ^:private ^:const like-pattern-escaping-char "\\")
-
 (defndialect like-pattern-escaping-sql
   []
-  (raw (str \' like-pattern-escaping-char \')))
+  (raw "'$'"))
 
 (defndialect escape-like-pattern
-  "Escapes all '%' and '_' characters with '\\'."
+  "Escapes all '%' and '_' characters with '$'."
   [^String a]
   (.. a
-    (replace
-      like-pattern-escaping-char
-      (str like-pattern-escaping-char like-pattern-escaping-char))
-    (replace "%" (str like-pattern-escaping-char "%"))
-    (replace "_" (str like-pattern-escaping-char "_"))))
+    (replace "$" "$$")
+    (replace "%" "$%")
+    (replace "_" "$_")))
 
 (defn render-function
   "Renders function (with or without arguments)."
@@ -258,8 +254,8 @@
   ([r] (compose-sql COUNT NOSP (parentheses r)))
   ([d r]
     (case d
-      :distinct (compose-sql COUNT (parentheses DISTINCT r))
-      nil [COUNT (parentheses r)]
+      :distinct (compose-sql COUNT NOSP (parentheses DISTINCT r))
+      nil (compose-sql COUNT NOSP (parentheses r))
       (illegal-argument "Unknown modifier " d))))
 
 (defoperator max
@@ -310,7 +306,8 @@
     ESCAPE (like-pattern-escaping-sql)))
 
 (defoperator str
-  [x & r] (parentheses* (interpose STR_CONCAT (cons x r))))
+  [& r]
+  (compose-sql CONCAT NOSP (parentheses (comma-list r))))
 
 (defn- render-case-ext
   [v cnds]

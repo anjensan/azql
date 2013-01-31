@@ -28,7 +28,7 @@
          ["f(?)" [1]] '(funfun 1)
          ["my-fun((? + ?), ?, fun(), fun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
          ["sin(cos(?) + sqrt(?))", [1 2]] '(sin (+ (cos 1) (sqrt 2)))
-         ["(? || ? || ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
+         ["CONCAT(?, ?, ?)", ["a" "b" "c"]] '(str "a" "b" "c"))))
 
 (deftest test-prepare-macro-expr
   (testing
@@ -73,9 +73,9 @@
   (testing
     "operator 'like'"
     (are [a b] (= a (:sql (sql* (render-expression b))))
-         "(? LIKE ? ESCAPE '\\')" ['like? "a" "b"]
-         "(x LIKE y ESCAPE '\\')" ['like? :x :y]
-         "(x LIKE ? ESCAPE '\\')" ['starts? :x "abc"]))
+         "(? LIKE ? ESCAPE '$')" ['like? "a" "b"]
+         "(x LIKE y ESCAPE '$')" ['like? :x :y]
+         "(x LIKE ? ESCAPE '$')" ['starts? :x "abc"]))
   (testing
     "alias 'starts?'"
     (is
