@@ -173,8 +173,7 @@
   (as-sql [this]
     (if (:batch (meta this))
       (batch-arg this)
-      (illegal-argument "Can't convert '" (vec this) "' to sql,
-                         probably you forgot to add {:batch true} meta.")))
+      (illegal-argument "Can't convert '" (vec this) "' to sql.")))
 
   clojure.lang.IPersistentMap
   (as-sql [this]

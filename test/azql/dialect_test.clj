@@ -1,12 +1,8 @@
 (ns azql.dialect-test
   (:use clojure.test)
   (:use azql.dialect)
-  (:require [clojure.java.jdbc :as jdbc]))
-
-(def h2-database-connection
-  {:classname   "org.h2.Driver"
-   :subprotocol "h2"
-   :subname "mem://azql-test"})
+  (:require [clojure.java.jdbc :as jdbc])
+  (:use azql.test-database))
 
 (defndialect myfun [] :default-dialect)
 
@@ -15,7 +11,6 @@
   (fn [f]
     (try (f)
       (finally
-        (remove-method guess-dialect :h2)
         (remove-method myfun ::dialect-a)))))
 
 (deftest test-parse-jdbc-url
@@ -27,17 +22,14 @@
 (deftest test-current-dialect
   (is (= :azql.dialect/sql92
          (current-dialect)))
-  (is (= :azql.dialect/sql92
-         (jdbc/with-connection h2-database-connection (current-dialect))))
+  (is (= database-dialect
+         (jdbc/with-connection database-connection (current-dialect))))
   (is (= :mydialect
          (binding [*dialect* :mydialect]
            (current-dialect))))
   (is (= :mydialect
          (binding [*dialect* :mydialect]
-           (jdbc/with-connection h2-database-connection (current-dialect)))))
-  (testing "define new dialect"
-           (defmethod guess-dialect :h2 [_] ::h2-dialect)
-           (is (= ::h2-dialect (jdbc/with-connection h2-database-connection (current-dialect))))))
+           (jdbc/with-connection database-connection (current-dialect))))))
 
 (deftest test-custom-dialect
   (register-dialect ::dialect-a)

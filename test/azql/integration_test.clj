@@ -1,32 +1,8 @@
 (ns azql.integration-test
   (:use clojure.test)
   (:use [azql core emit])
-  (:require [clojure.java.jdbc :as jdbc]))
-
-(def h2-database-connection
-  {:classname   "org.h2.Driver"
-   :subprotocol "h2"
-   :subname "mem://azql-test"})
-
-(defn create-database
-  []
-  (jdbc/create-table
-    :users
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:name "VARCHAR(50)"]
-    [:dob "DATE"])
-  (jdbc/create-table
-    :posts
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(10000)"]
-    [:userid "INT"])
-  (jdbc/create-table
-    :comments
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(500)"]
-    [:userid "INT"]
-    [:postid "INT"]
-    [:parentid "INT"]))
+  (:require [clojure.java.jdbc :as jdbc])
+  (:use azql.test-database))
 
 (defn populate-database
   []
@@ -56,8 +32,8 @@
 
 (defn create-testdb-fixture
   [f]
-  (jdbc/with-connection h2-database-connection
-    (jdbc/with-quoted-identifiers \"
+  (jdbc/with-connection database-connection
+    (jdbc/with-quoted-identifiers database-quote-symbol
       (create-database)
       (populate-database))
     (f)))
@@ -179,7 +155,7 @@
 (deftest test-raw-queries
   (is (= 3 (count (fetch-all (sql  'select '* 'from :users)))))
   (is (= 3 (fetch-single
-             (sql 'select 'count LEFT_PAREN '* RIGHT_PAREN 'from :users)))))
+             (sql 'select 'count NOSP LEFT_PAREN NOSP '* NOSP RIGHT_PAREN 'from :users)))))
 
 (deftest test-insert
 
