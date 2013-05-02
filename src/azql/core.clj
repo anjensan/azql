@@ -177,10 +177,10 @@
   [join-name join-key]
   (defmacro join-name
    ([relation alias table cond]
-     `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond)))
+     `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond &env)))
    ([relation table cond]
      `(let [table# ~table]
-        (join* ~relation ~join-key nil table# ~(prepare-macro-expression cond)))))
+        (join* ~relation ~join-key nil table# ~(prepare-macro-expression cond &env)))))
   join-inner :inner, join :inner,
   join-right :right, join-left :left, join-full :full)
 
@@ -192,18 +192,18 @@
   (assoc query :fields fd))
 
 (defn- prepare-fields
-  [fs]
+  [fs env]
   (if (map? fs)
-    (map-vals prepare-macro-expression fs)
+    (map-vals #(prepare-macro-expression % env) fs)
     (let [aa (if (= 1 (count fs))
                as-alias
                as-alias-safe)]
-      (into {} (map (juxt aa prepare-macro-expression) fs)))))
+      (into {} (map (juxt aa #(prepare-macro-expression % env)) fs)))))
 
 (defmacro fields
   "Adds field list to query, support expressions."
   [query fd]
-  `(fields* ~query ~(prepare-fields fd)))
+  `(fields* ~query ~(prepare-fields fd &env)))
 
 (defn where*
   "Adds 'where' condition to query"
@@ -214,7 +214,7 @@
 (defmacro where
   "Adds 'where' condition to query, support expressions."
   [s c]
-  `(where* ~s ~(prepare-macro-expression c)))
+  `(where* ~s ~(prepare-macro-expression c &env)))
 
 (defn order*
   "Adds 'order by' section to query."
@@ -230,8 +230,8 @@
 
 (defmacro order
   "Adds 'order by' section to query."
-  ([relation column] `(order* ~relation ~(prepare-macro-expression column)))
-  ([relation column dir] `(order* ~relation ~(prepare-macro-expression column) ~dir)))
+  ([relation column] `(order* ~relation ~(prepare-macro-expression column &env)))
+  ([relation column dir] `(order* ~relation ~(prepare-macro-expression column &env) ~dir)))
 
 (defn group
   "Adds 'group by' section to query."
@@ -273,7 +273,7 @@
 (defmacro having
   "Adds 'having' condition to query, supports macro expressions"
   [s c]
-  `(having* ~s ~(prepare-macro-expression c)))
+  `(having* ~s ~(prepare-macro-expression c &env)))
 
 (defn add-query
   "Adds new select to combined query."
@@ -292,7 +292,7 @@
     `combine*
     (cons
       (keyword type)
-      (map (fn [f] (if (subquery-form? f) `(add-query ~f) f)) body))))
+      (map (fn [f] (if (subquery-form? f &env) `(add-query ~f) f)) body))))
 
 (defmacro union
   "Creates union between queries."
@@ -438,7 +438,7 @@
 (defmacro setf
   "Adds field to update statement."
   [query fname value]
-  `(setf* ~query ~fname ~(prepare-macro-expression value)))
+  `(setf* ~query ~fname ~(prepare-macro-expression value &env)))
 
 (defmacro delete!
   "Deletes records from a table."

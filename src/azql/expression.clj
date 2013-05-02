@@ -62,21 +62,24 @@
   "Walks tree and replaces synonyms.
    Skips all symbols from `subquery-symbols` set.
    Ex: (+ 1 (/ :x :y)) => ['+ 1 ['divide :x :y]]"
-  [e]
-  (if (and
-        (seq? e)
-        (not (subquery-form? e))
-        (not (namespace (first e))))
-    (let [f (canonize-operator-symbol (first e))]
-      (when-not f
-        (illegal-argument "Invalid expression '" e "', unknown operator."))
-      `(list
-         (quote ~f)
-         ~@(map prepare-macro-expression (rest e))))
-    (if (map-style-expression? e)
-      (prepare-macro-expression
-        (normalize-map-style-expression e))
-      e)))
+  ([e env]
+     (if (and
+          (seq? e)
+          (not (subquery-form? e env))
+          (not (namespace (first e))))
+       (let [f (canonize-operator-symbol (first e))]
+         (when-not f
+           (illegal-argument "Invalid expression '" e "', unknown operator."))
+         `(list
+           (quote ~f)
+           ~@(map #(prepare-macro-expression % env) (rest e))))
+       (if (map-style-expression? e)
+         (prepare-macro-expression
+          (normalize-map-style-expression e)
+          env)
+         e)))
+  ([e]
+     (prepare-macro-expression e nil)))
 
 (defn conj-expression
   "Concatenates two logical expressions with 'AND'."

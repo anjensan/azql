@@ -3,10 +3,7 @@
   (:require [clojure.set :as cset])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(defprotocol Query
-  (_dummy "Dummy method, see #CLJ-966" [_]))
-
-(ns-unmap *ns* '_dummy)
+(defprotocol Query)
 
 (defn- as-table-or-subquery
   [v]

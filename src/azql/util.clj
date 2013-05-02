@@ -52,9 +52,9 @@
 
 (defn subquery-form?
   "Checks is form is 'subquery'. Should only be used in macros."
-  ([ns form]
+  ([form env]
     (when (seq? form)
       (when-let [s (first form)]
-        (contains? subquery-vars (resolve ns s)))))
+        (contains? subquery-vars (resolve s)))))
   ([form]
-    (subquery-form? *ns* form)))
+     (subquery-form? form nil)))
