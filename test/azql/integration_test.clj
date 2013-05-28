@@ -4,20 +4,26 @@
   (:require [clojure.java.jdbc :as jdbc])
   (:use azql.test-database))
 
+(defn sql-date [^java.util.Date x]
+  (java.sql.Date. (.getTime x)))
+
 (defn populate-database
   []
   ;; 3 users, each user has 3 comments & 2 or 0 posts
+
   (jdbc/insert-rows
     :users
-    [1 "Artyom" #inst"1980-01-21"]
-    [2 "Anton" #inst"1981-02-22"]
-    [3 "Arturas" #inst"1982-03-23"])
+    [1 "Artyom" (sql-date #inst"1980-01-21")]
+    [2 "Anton" (sql-date #inst"1981-02-22")]
+    [3 "Arturas" (sql-date #inst"1982-03-23")])
+
   (jdbc/insert-rows
     :posts
     [1 "first post" 1]
     [2 "second post" 1]
     [3 "the post" 2]
     [4 "repost" 2])
+
   (jdbc/insert-rows
     :comments
     [1 "comment1" 1 1 nil]
@@ -161,7 +167,7 @@
 
   (testing
     "insert single record"
-    (insert! :users {:name "New User" :dob #inst"1988-03-21T00:00"})
+    (insert! :users {:id 10 :name "New User" :dob (sql-date #inst"1988-03-21T00:00")})
     (select (from :users) (fetch-all))
     (is (select (from :users) (where (= :name "New User")) (fetch-one)))
     (delete! (from :users) (where (= :name "New User")))
@@ -169,7 +175,10 @@
 
   (testing
     "insert multiple records"
-    (insert! :posts (values {:text "New Post 1"}) (values {:text "New Post 2" :userid 1}))
+    (insert!
+     :posts
+     (values {:id 11 :text "New Post 1"})
+     (values {:id 12 :text "New Post 2" :userid 1}))
     (is (= 1 (select (from :posts) (fields [:userid]) (where (= :text "New Post 2")) (fetch-single))))
     (delete! (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
     (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))

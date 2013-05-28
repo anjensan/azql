@@ -1,11 +1,10 @@
 (ns azql.test-database
   (:use azql.dialect)
-  (:use azql.emit)
   (:require [clojure.java.jdbc :as jdbc]))
 
 (def database-connection
-  {:classname "com.mysql.jdbc.Driver"
-   :subprotocol "mysql"
+  {:classname "org.postgresql.Driver"
+   :subprotocol "postgresql"
    :user "test"
    :password "test"
    :subname "//localhost/azql_test"})
@@ -15,35 +14,32 @@
 
   (jdbc/do-commands "DROP TABLE IF EXISTS users")
   (jdbc/do-commands "DROP TABLE IF EXISTS posts")
-  (jdbc/do-commands "DROP TABLE IF EXISTS comments")  
+  (jdbc/do-commands "DROP TABLE IF EXISTS comments")
 
   (jdbc/create-table
     :users
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    [:id "SERIAL" "PRIMARY KEY"]
     [:name "VARCHAR(50)"]
     [:dob "DATE"])
 
   (jdbc/create-table
     :posts
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    [:id "SERIAL" "PRIMARY KEY"]
     [:text "VARCHAR(10000)"]
     [:userid "INT"])
 
   (jdbc/create-table
     :comments
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    [:id "SERIAL" "PRIMARY KEY"]
     [:text "VARCHAR(500)"]
     [:userid "INT"]
     [:postid "INT"]
     [:parentid "INT"]))
 
-(def database-dialect ::mysql)
-(register-dialect ::mysql)
+(def database-dialect ::pgsql)
+(register-dialect ::pgsql)
 
-(defmethod guess-dialect :mysql [_]
-  ::mysql)
+(defmethod guess-dialect :postgresql [_]
+  ::pgsql)
 
-(defmethod entity-naming-strategy ::mysql []
-  (fn [x] (str \` x \`)))
-
-(def database-quote-symbol \`)
+(def database-quote-symbol \")
