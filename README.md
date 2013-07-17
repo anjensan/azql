@@ -16,7 +16,7 @@ Main goals of this project:
 Add the following to your project.clj:
 
 ```clj    
-[azql "0.1.0"]
+[azql "0.2.0"]
 ```
 
 
@@ -24,23 +24,27 @@ Add the following to your project.clj:
 
 AZQL syntax is quite similar to SQL:
 
-```clj    
-(select
-  (fields [:id :name :email])
-  (from :a :Users)
-  (where (= :a.role "ADMIN"))
-  (fetch-all))
+```clj
+
+(def db #<jdbc connection params>)
+
+(fetch-all db
+  (select
+    (fields [:id :name :email])
+    (from :a :Users)
+    (where (= :a.role "ADMIN"))))
 ```
 
 After macroexpansions:
 
 ```clj
-(->
-  (select*)
-  (fields* {:id :id, :name :name, :email :email})
-  (join* nil :a :Users) ; nil means 'implicit cross join'
-  (where* (list '= :a.role "ADMIN"))
-  (fetch-all))
+(fetch-all db
+  (->
+    (select*)
+    (fields* {:id :id, :name :name, :email :email})
+    (join* nil :a :Users) ; nil means 'implicit cross join'
+    (where* (list '= :a.role "ADMIN")))
+
 ```
 
 Function `fetch-all` executes query and converts `resultset-seq` into vector.
@@ -53,7 +57,7 @@ Library provides some alternatives:
 Fox example:
 
 ```clj
-(with-fetch [f (table :Users)]
+(with-fetch db [f (table :Users)]
   (reduce + (map :rating f)))
 ```
 
@@ -65,7 +69,7 @@ It is possible to compose additional conditions:
   (-> all-users (where (= :status "BANNED"))))
 (def banned-admins
   (-> banned-users (where (= :role "ADMIN")))
-(println (fetch-all banned-admins))
+(println (fetch-all db banned-admins))
 ```
 
 Also you can use map-style conditions.
@@ -79,7 +83,7 @@ Also you can use map-style conditions.
 Final SQL available using `sql` function:
 
 ```clj
-user> (select (from :Users) (where {:id 123}) (sql))
+user> (sql db (select (from :Users) (where {:id 123})))
 #<"SELECT * FROM \"Users\" WHERE (\"id\" = ?)" 123>
 ```
 
@@ -142,7 +146,7 @@ Library supports subqueries:
   (from all-users)
   (where (= :status "ACTIVE"))))
 
-(fetch-all all-active-users)
+(fetch-all db all-active-users)
 ```
 
 ALL, ANY and SOME are supported also.
