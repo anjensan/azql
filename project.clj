@@ -1,4 +1,4 @@
-(defproject azql "0.1.0"
+(defproject azql "0.1.9"
   :description "DSL for SQL generation"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
@@ -16,4 +16,4 @@
     :test-paths ["test-profile/pgsql"]},
    :dev
    [:h2]}
-  :warn-on-reflection true)
+  :global-vars {*warn-on-reflection* true})
