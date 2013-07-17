@@ -167,24 +167,29 @@
         (Sql. (join-sql-strings s)
               (seq (mapcat :args s)))))))
 
-; TODO: review types
+(defn- seq-as-sql
+  [v]
+  (if (:batch (meta v))
+    (batch-arg v)
+    (illegal-argument "Can't convert '" v "' to sql.")))
+
 (extend-protocol SqlLike
 
-  clojure.lang.Sequential
-  (as-sql [this]
-    (if (:batch (meta this))
-      (batch-arg this)
-      (illegal-argument "Can't convert '" (vec this) "' to sql.")))
+  clojure.lang.Seqable
+  (as-sql [this] (seq-as-sql this))
 
-  clojure.lang.IPersistentMap
+  clojure.lang.Fn
   (as-sql [this]
-    (illegal-argument "Can't convert '" this "' to sql."))
+    (illegal-argument "Can't convert function '" this "' to sql."))
 
   clojure.lang.Keyword
   (as-sql [this] (qname this))
 
   clojure.lang.Symbol
   (as-sql [this] (raw (name this)))
+
+  clojure.lang.Ref
+  (as-sql [this] (as-sql (deref this)))
 
   Object
   (as-sql [this] (arg this))

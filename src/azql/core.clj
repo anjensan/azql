@@ -65,7 +65,7 @@
   Select Insert Update Delete CombinedQuery)
 
 (defmethod print-method LazySelect [^LazySelect s ^Appendable w]
-  (.append w (interpolate-sql (.content s))))
+  (.append w (interpolate-sql ((.content-fn s)))))
 
 (declare fields*)
 (declare from)
