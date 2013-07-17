@@ -250,13 +250,13 @@
 
     (defselect dst-select [] (from :X))
     (is (= "SELECT * FROM X"
-           (:sql(sql*
-                  (binding [azql.dialect/*dialect* ::dialect]
-                    (dst-select))))))
+           (:sql
+            (binding [azql.dialect/*dialect* ::dialect]
+              (sql* (dst-select))))))
     (is (= "SELECT * FROM \"X\""
-           (:sql(sql*
-                  (binding [azql.dialect/*dialect* default-dialect]
-                    (dst-select)))))))
+           (:sql
+            (binding [azql.dialect/*dialect* default-dialect]
+              (sql* (dst-select)))))))
 
   (testing
     "defselect with raw queries"

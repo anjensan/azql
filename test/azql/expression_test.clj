@@ -88,10 +88,10 @@
     (defoperator myfun ::custom-dialect [] :myfun-dialect)
     (deffunctions ::custom-dialect [f1] f2 {f3 Fx3})
     (is (= :myfun-default (render-operator 'myfun)))
-    (is (= :myfun-dialect (binding [*dialect* ::custom-dialect]
+    (is (= :myfun-dialect (with-bindings {#'azql.dialect/*dialect* ::custom-dialect}
                             (render-operator 'myfun))))
-    (are [a b] (= a (:sql (sql* (binding
-                                  [*dialect* ::custom-dialect]
+    (are [a b] (= a (:sql (sql* (with-bindings
+                                  {#'azql.dialect/*dialect* ::custom-dialect}
                                   (render-expression b)))))
          "f1()" ['f1]
          "f2(?)" ['f2 1]

@@ -7,6 +7,8 @@
 (defn sql-date [^java.util.Date x]
   (java.sql.Date. (.getTime x)))
 
+(def ^:dynamic ^:private db)
+
 (defn populate-database
   []
   ;; 3 users, each user has 3 comments & 2 or 0 posts
@@ -36,13 +38,17 @@
     [8 "comment1" 3 2 1]
     [9 "comment9" 3 3 1]))
 
+;; FIXME
 (defn create-testdb-fixture
   [f]
-  (jdbc/with-connection database-connection
-    (jdbc/with-quoted-identifiers database-quote-symbol
-      (create-database)
-      (populate-database))
-    (f)))
+  (with-open [conn (jdbc/get-connection database-connection)]
+    (let [new-db (jdbc/add-connection database-connection conn)]
+      (with-bindings {#'jdbc/*db* (-> new-db (assoc :level 0) (assoc :rollback (atom false)))
+                      #'db new-db}
+        (jdbc/with-quoted-identifiers database-quote-symbol
+          (create-database)
+          (populate-database))
+        (f)))))
 
 (defn transaction-fixture
   [f]
@@ -58,47 +64,49 @@
 (deftest test-simple-selects
 
   (testing "select all entities from table (test count)"
-           (are [c tbl] (= c (count (select (from tbl) (fetch-all))))
+           (are [c tbl] (= c (count (fetch-all db (select (from tbl)))))
          3 :users, 4 :posts, 9 :comments))
 
   (testing
     "select all entities (order by name)"
     (is (=
           [{:id 2 :name "Anton"}, {:id 3 :name "Arturas"}, {:id 1 :name "Artyom"}]
-          (select
+          (fetch-all
+           db
+           (select
             (fields [:id :name])
             (from :users)
             (order :name)
-            (offset 0)
-            (fetch-all)))))
+            (offset 0))))))
 
   (testing
     "lazy select all entities and collect ids"
     (is (=
           [1 2 3]
-          (with-fetch [v (select (from :users))] (reduce #(conj %1 (:id %2)) [] v)))))
+          (with-fetch db [v (select (from :users))] (reduce #(conj %1 (:id %2)) [] v)))))
 
   (testing
     "get user by id"
     (is (=
           {:id 2 :n "Anton"}
-          (select (from :users) (fields {:id :id :n :name}) (where (= :id 2)) (fetch-one)))))
+          (fetch-one db
+            (select (from :users) (fields {:id :id :n :name}) (where (= :id 2)))))))
 
   (testing
     "get user name by id"
     (is (=
           {:name "Arturas"}
-          (select (fields [:name]) (from :users) (where (= :id 3)) (fetch-one)))))
+          (fetch-one db (select (fields [:name]) (from :users) (where (= :id 3)))))))
 
   (testing
     "get only user name"
     (is (=
           "Arturas"
-          (select (from :users) (where (= :id 3)) (fields [:name]) (fetch-single)))))
+          (fetch-single db (select (from :users) (where (= :id 3)) (fields [:name]))))))
 
   (testing
     "get posts without parent"
-    (is (= 5 (select (from :comments) (where (= :parentid nil)) (fetch-all) (count))))))
+    (is (= 5 (count (fetch-all db (select (from :comments) (where (= :parentid nil)))))))))
 
 
 (deftest test-operators
@@ -107,30 +115,30 @@
     "string concatenation"
     (is (=
           "2-x-Anton"
-          (select
+          (fetch-single db
+           (select
             (from :users)
             (fields [(str :id "-x-" :name)])
-            (where (= :id 2))
-            (fetch-single))))))
+            (where (= :id 2))))))))
 
 (deftest test-like-operator
   (testing
     "test like operator"
     (is (=
           "Arturas"
-                 (select [:name] (from :users) (where (like? :name "%turas")) (fetch-single))))
+          (fetch-single db (select [:name] (from :users) (where (like? :name "%turas"))))))
     (is (=
           "Arturas"
-          (select [:name] (from :users) (where (starts? :name "Artur")) (fetch-single))))
+          (fetch-single db (select [:name] (from :users) (where (starts? :name "Artur"))))))
     (is
       (nil?
-        (select (from :users) (where (starts? :name "Artur%")) (fetch-one))))))
+        (fetch-single db (select (from :users) (where (starts? :name "Artur%"))))))))
 
 (deftest test-multi-value-expressions
   (testing
     "operator 'in'"
     (are [cnt s]
-         (= cnt (count (fetch-all s)))
+         (= cnt (count (fetch-all db s)))
          9
          (select
            (from :comments)
@@ -153,44 +161,46 @@
            (where (in? :userid [1 3]))))))
 
 (deftest test-aggregate-expressions
-  (is (= 3 (select (from :users) (fields [(count :*)]) (fetch-single))))
-  (is (= 1 (select (fields [:parentid]) (from :comments)
-                   (group [:parentid]) (where (not-nil? :parentid))
-                   (having (> (count :id) 2)) (fetch-single)))))
+  (is (= 3 (fetch-single db (select (from :users) (fields [(count :*)])))))
+  (is (= 1 (fetch-single
+            db
+            (select (fields [:parentid]) (from :comments)
+                    (group [:parentid]) (where (not-nil? :parentid))
+                    (having (> (count :id) 2)))))))
 
 (deftest test-raw-queries
-  (is (= 3 (count (fetch-all (sql  'select '* 'from :users)))))
-  (is (= 3 (fetch-single
-             (sql 'select 'count NOSP LEFT_PAREN NOSP '* NOSP RIGHT_PAREN 'from :users)))))
+  (is (= 3 (count (fetch-all db (sql db 'select '* 'from :users)))))
+  (is (= 3 (fetch-single db
+             (sql db 'select 'count NOSP LEFT_PAREN NOSP '* NOSP RIGHT_PAREN 'from :users)))))
 
 (deftest test-insert
 
   (testing
     "insert single record"
-    (insert! :users {:id 10 :name "New User" :dob (sql-date #inst"1988-03-21T00:00")})
-    (select (from :users) (fetch-all))
-    (is (select (from :users) (where (= :name "New User")) (fetch-one)))
-    (delete! (from :users) (where (= :name "New User")))
-    (is (not (select (from :users) (where (= :name "New User")) (fetch-one)))))
+    (insert! db :users {:id 10 :name "New User" :dob (sql-date #inst"1988-03-21T00:00")})
+    (fetch-all db (select (from :users)))
+    (is (fetch-one db (select (from :users) (where (= :name "New User")))))
+    (delete! db (from :users) (where (= :name "New User")))
+    (is (not (fetch-one db (select (from :users) (where (= :name "New User")))))))
 
   (testing
     "insert multiple records"
-    (insert!
+    (insert! db
      :posts
      (values {:id 11 :text "New Post 1"})
      (values {:id 12 :text "New Post 2" :userid 1}))
-    (is (= 1 (select (from :posts) (fields [:userid]) (where (= :text "New Post 2")) (fetch-single))))
-    (delete! (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
-    (is (empty? (select (from :posts) (where (= :text "New Post 2")) (fetch-all))))))
+    (is (= 1 (fetch-single db (select (from :posts) (fields [:userid]) (where (= :text "New Post 2"))))))
+    (delete! db (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
+    (is (empty? (fetch-all db (select (from :posts) (where (= :text "New Post 2"))))))))
 
 (deftest test-update
 
   (testing
     "update one record"
-    (update! :users (setf :name "XXX") (where (= :name "Anton")))
-    (is (= 1 (select (from :users) (where (= :name "XXX")) (fetch-all) (count)))))
+    (update! db :users (setf :name "XXX") (where (= :name "Anton")))
+    (is (= 1 (count (fetch-all db (select (from :users) (where (= :name "XXX"))))))))
 
   (testing
     "update all records"
-    (update! :users (setf :name "XXX"))
-    (is (= 3 (select (from :users) (where (= :name "XXX")) (fetch-all) (count))))))
+    (update! db :users (setf :name "XXX"))
+    (is (= 3 (count (fetch-all db (select (from :users) (where (= :name "XXX")))))))))

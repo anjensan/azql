@@ -10,22 +10,22 @@
 (defn create-database
   []
   (jdbc/create-table
-    :users
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:name "VARCHAR(50)"]
-    [:dob "DATE"])
+    "\"users\""
+    ["\"id\"" "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    ["\"name\"" "VARCHAR(50)"]
+    ["\"dob\"" "DATE"])
   (jdbc/create-table
-    :posts
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(10000)"]
-    [:userid "INT"])
+    "\"posts\""
+    ["\"id\"" "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    ["\"text\"" "VARCHAR(10000)"]
+    ["\"userid\"" "INT"])
   (jdbc/create-table
-    :comments
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(500)"]
-    [:userid "INT"]
-    [:postid "INT"]
-    [:parentid "INT"]))
+    "\"comments\""
+    ["\"id\"" "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
+    ["\"text\"" "VARCHAR(500)"]
+    ["\"userid\"" "INT"]
+    ["\"postid\"" "INT"]
+    ["\"parentid\"" "INT"]))
 
 (def database-dialect ::h2)
 (register-dialect ::h2)

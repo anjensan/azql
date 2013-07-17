@@ -1,11 +1,13 @@
 (ns azql.dialect
-  (:use [azql util])
+  (:use [azql util connection])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def ^:const default-dialect ::sql92)
-(def dialects-hierarchy (make-hierarchy))
+(conj (range 100) 5)
 
-(def ^{:doc "Current dialect." :dynamic true} *dialect* nil)
+(def ^:const default-dialect ::sql92)
+(def ^:private ^:dynamic *dialect* nil)
+
+(def dialects-hierarchy (make-hierarchy))
 
 (defn parse-jdbc-protocol
   "Parses JDBC connection URL and returns protocol."
@@ -21,21 +23,18 @@
 ;; use ::sql92 for all unknown databases
 (defmethod guess-dialect :default [_] default-dialect)
 
-(defn current-jdbc-connection-dialect
+(defn db-connection-dialect
   "Guess dialect for current JDBC connection."
-  []
-  (when-let [^java.sql.Connection conn (jdbc/find-connection)]
-    (guess-dialect (.getMetaData conn))))
+  [db]
+  (when db
+    (when-let [^java.sql.Connection conn (jdbc/db-connection db)]
+      (guess-dialect (.getMetaData conn)))))
 
 (defn current-dialect
   "Returns current SQL dialect.
    Accepts any number of arguments and ignores them."
   [& _]
-  (or
-    *dialect*
-    (:azql/dialect @#'jdbc/*db*)
-    (current-jdbc-connection-dialect)
-    default-dialect))
+  (or *dialect* default-dialect))
 
 (defn register-dialect
   "Registers new dialect (adds it to hierarchy)."
@@ -68,8 +67,6 @@
 (defn with-recognized-dialect*
   "Recognizes dialect of current connection and adds it to jdbc/*db*."
   [f]
-  (if (find @#'jdbc/*db* :azql/dialect)
-    (f)
-    (if-let [d (or *dialect* (current-jdbc-connection-dialect))]
-      (with-bindings* {#'jdbc/*db* (assoc @#'jdbc/*db* :azql/dialect d)} f)
-      (f))))
+  (if-let [d (or *dialect* (db-connection-dialect (get-current-db)))]
+    (binding [*dialect* d] (f))
+    (f)))

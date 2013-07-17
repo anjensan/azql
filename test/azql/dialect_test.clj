@@ -1,6 +1,6 @@
 (ns azql.dialect-test
   (:use clojure.test)
-  (:use azql.dialect)
+  (:use [azql dialect core])
   (:require [clojure.java.jdbc :as jdbc])
   (:use azql.test-database))
 
@@ -23,12 +23,12 @@
   (is (= :azql.dialect/sql92
          (current-dialect)))
   (is (= database-dialect
-         (jdbc/with-connection database-connection (current-dialect))))
+         (with-azql-context database-connection (current-dialect))))
   (is (= :mydialect
-         (binding [*dialect* :mydialect]
+         (with-bindings {#'azql.dialect/*dialect* :mydialect}
            (current-dialect))))
   (is (= :mydialect
-         (binding [*dialect* :mydialect]
+         (with-bindings {#'azql.dialect/*dialect* :mydialect}
            (jdbc/with-connection database-connection (current-dialect))))))
 
 (deftest test-custom-dialect
@@ -36,5 +36,5 @@
   (register-dialect ::dialect-b ::dialect-a)
   (defmethod myfun ::dialect-a [] :dialect-a)
   (is (= :default-dialect (myfun)))
-  (is (= :dialect-a (binding [*dialect* ::dialect-a] (myfun))))
-  (is (= :dialect-a (binding [*dialect* ::dialect-b] (myfun)))))
+  (is (= :dialect-a (with-bindings {#'azql.dialect/*dialect* ::dialect-a} (myfun))))
+  (is (= :dialect-a (with-bindings {#'azql.dialect/*dialect* ::dialect-b} (myfun)))))

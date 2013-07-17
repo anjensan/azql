@@ -6,17 +6,18 @@
 
 (defmacro with-azql-context
   "Executes code in azql context (global connection, naming strategy ect.).
-   All public functions automatically call this macro."
-  [& body]
-  `(-> (do ~@body)
-     with-dialect-naming-strategy
-     with-recognized-dialect
-     with-global-connection))
+   All public functions automatically call this macro.
+   For internal usage only!"
+  [db & body]
+  `(->> (do ~@body)
+        (with-dialect-naming-strategy)
+        (with-recognized-dialect)
+        (with-connection ~db)))
 
 (defn sql
-  "Converts object to Sql. Requires jdbc-coneection."
-  ([& args]
-    (with-azql-context (apply sql* args))))
+  "Converts object to Sql."
+  ([db & args]
+    (with-azql-context db (apply sql* args))))
 
 (defrecord Select
   [tables joins fields where
@@ -47,10 +48,15 @@
   SqlLike
   (as-sql [this] (as-sql (render-combined this))))
 
-(defrecord PrecompiledSelect [content]
+(defrecord LazySelect [content-fn]
   Query
   SqlLike
-  (as-sql [this] content))
+  (as-sql [this] (content-fn)))
+
+(defrecord RenderedSelect [content]
+  Query
+  SqlLike
+  (as-sql [this] (as-sql content)))
 
 (do-template
   [v]
@@ -58,7 +64,7 @@
     (.append w (interpolate-sql s)))
   Select Insert Update Delete CombinedQuery)
 
-(defmethod print-method PrecompiledSelect [^PrecompiledSelect s ^Appendable w]
+(defmethod print-method LazySelect [^LazySelect s ^Appendable w]
   (.append w (interpolate-sql (.content s))))
 
 (declare fields*)
@@ -86,25 +92,26 @@
   (let [sargs (mapv ->SurrogatedArg args)
         sargs-args-map (into {} (map vector sargs args))]
     `(let [sqls# (atom {})
-           original# (fn ~args (select ~@body (sql)))
+           original# (fn ~args (sql* (select ~@body)))
            compile# (fn [] (apply original# ~sargs))]
        (defn ~name ~args
-         (let [dialect# (current-dialect)
-               cached-sql# (get @sqls# dialect#)
-               sql# (if cached-sql#
-                      cached-sql#
-                      (let [new-sql# (compile#)]
-                        (swap! sqls# assoc dialect# new-sql#)
-                        new-sql#))
-               args# (:args sql#)]
-           (->PrecompiledSelect
-             (assoc sql# :args (replace ~sargs-args-map args#))))))))
+         (->LazySelect
+          (fn []
+            (let [dialect# (current-dialect)
+                  cached-sql# (get @sqls# dialect#)
+                  sql# (if cached-sql#
+                         cached-sql#
+                         (let [new-sql# (compile#)]
+                           (swap! sqls# assoc dialect# new-sql#)
+                           new-sql#))
+                  args# (:args sql#)]
+              (assoc sql# :args (replace ~sargs-args-map args#)))))))))
 
 (defn- emit-raw-select
   [name args sql]
   (let [args-map (into {} (map (juxt keyword identity) args))]
     `(defn ~name ~args
-       (->PrecompiledSelect
+       (->RenderedSelect
          (format-sql ~sql ~args-map)))))
 
 (defmacro defselect
@@ -318,18 +325,26 @@
 
 (defmacro with-fetch
   "Executes a query & evaluates body with 'v' bound to seq of results."
-  [[v relation :as vr] & body]
+  [db [v relation :as vr] & body]
   (check-argument (vector? vr))
   (check-argument (= 2 (count vr)))
-  `(with-azql-context
-     (let [sp# (#'to-sql-params ~relation)]
-       (jdbc/with-query-results ~v sp# ~@body))))
+  `(with-azql-context ~db
+     (let [sql-params# (#'to-sql-params ~relation)
+           f# (fn [~v] ~@body)]
+       (jdbc/query
+        (get-current-db)
+        sql-params#
+        :result-set-fn f#
+        :row-fn identity))))
 
 (defn fetch-all
   "Executes query and returns results as a vector."
-  [relation]
-  (with-azql-context
-    (jdbc/with-query-results* (to-sql-params relation) vec)))
+  ([db relation]
+     (with-azql-context db
+       (jdbc/query
+        (get-current-db)
+        (to-sql-params relation)
+        :result-set-fn vec))))
 
 (defn- one-result
   "Extracts one record from resultset."
@@ -348,25 +363,32 @@
 (defn fetch-one
   "Executes query and returns first element or throws an exception
    if resultset contains more than one record."
-  [relation]
-  (with-azql-context
-    (jdbc/with-query-results* (to-sql-params relation) one-result)))
+  ([db relation]
+     (with-azql-context db
+       (jdbc/query
+        (get-current-db)
+        (to-sql-params relation)
+        :result-set-fn one-result))))
 
 (defn fetch-single
   "Executes quiery and return single result value. Useful for aggregate functions."
-  [relation]
-  (with-azql-context
-    (jdbc/with-query-results* (to-sql-params relation) single-result)))
+  ([db relation]
+     (with-azql-context db
+       (jdbc/query
+        (get-current-db)
+        (to-sql-params relation)
+        :result-set-fn single-result))))
 
 ;; updates
 
 (defn execute!
   "Executes update statement."
-  [query]
-  (with-azql-context
-    (let [{s :sql a :args} (sql* query)]
-      (first
-        (jdbc/do-prepared s a)))))
+  ([db query]
+     (with-azql-context db
+       (let [{s :sql a :args} (sql* query)]
+         (first
+          (jdbc/db-do-prepared
+           (get-current-db) false s a))))))
 
 (defn- batch-arg?
   [v]
@@ -374,13 +396,17 @@
 
 (defn execute-return-keys!
   "Executes update statement and returns generated keys."
-  [query]
-  (with-azql-context
+  [db query]
+  (with-azql-context db
     (let [{s :sql a :args} (sql* query)]
       (check-argument
         (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
         "Can't return generated keys for batch query.")
-      (jdbc/do-prepared-return-keys s (map #(if (batch-arg? %) (first %) %) a)))))
+      (jdbc/db-do-prepared-return-keys
+       (get-current-db)
+       false
+       s
+       (map #(if (batch-arg? %) (first %) %) a)))))
 
 (defn- prepare-batch-arguments
   [arguments]
@@ -400,10 +426,10 @@
 
 (defn execute-batch!
   "Executes batch statement."
-  [query]
-  (with-azql-context
+  [db query]
+  (with-azql-context db
     (let [{s :sql a :args} (sql* query)]
-      (apply jdbc/do-prepared s (prepare-batch-arguments a)))))
+      (apply jdbc/db-do-prepared (get-current-db) false s (prepare-batch-arguments a)))))
 
 (defn values
   "Adds records to insert statement."
@@ -442,29 +468,29 @@
 
 (defmacro delete!
   "Deletes records from a table."
-  [& body]
-  `(execute!
+  [db & body]
+  `(execute! ~db
      ~(emit-threaded-expression `delete* body)))
 
 (defn execute-insert!
   "Executes insert query.
    If a single record is inserted, returns map of the generated keys."
-  [{r :records :as query}]
-  (if (= 1 (count r))
-    (execute-return-keys! query)
-    (execute-batch! query)))
+  ([db {r :records :as query}]
+     (if (= 1 (count r))
+       (execute-return-keys! db query)
+       (execute-batch! db query))))
 
 (defmacro insert!
   "Inserts new record into the table.
    If a single record is inserted, returns map of the generated keys."
-  [& body]
-  `(execute-insert!
+  [db & body]
+  `(execute-insert! ~db
      ~(emit-threaded-expression `insert* body)))
 
 (defmacro update!
   "Executes update statement."
-  [& body]
-  `(execute!
+  [db & body]
+  `(execute! ~db
      ~(emit-threaded-expression `update* body)))
 
 (defn escape-like

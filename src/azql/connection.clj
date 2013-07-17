@@ -1,42 +1,21 @@
 (ns azql.connection
-  (:use [azql util dialect])
+  (:use [azql util])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def ^:dynamic ^{:doc "Global connection."}
-  ^java.sql.Connection global-connection nil)
+(def ^:dynamic ^:private ^java.sql.Connection *db* nil)
 
-(defn with-global-connection*
-  "Executes function in a scope of the global connection."
-  [f]
-  (if (jdbc/find-connection)
-    (f)
-    (if-let [c global-connection]
-      (with-bindings*
-        ; copied from `clojure.java.jdbc/with-connection`
-        {#'jdbc/*db*
-         (assoc @#'jdbc/*db*
-                :connection c
-                :level 0
-                :rollback (atom false)
-                :azql/dialect (guess-dialect (.getMetaData c)))}
-        f)
-      (f))))
-
-(defmacro with-global-connection
-  "Executes code in a scope of the global connection."
-  [& bs]
-  `(with-global-connection* (fn [] ~@bs)))
-
-(defn open-global-connection
-  "Opens global connection."
-  [db-spec]
-  (alter-var-root
-    #'global-connection
-    (fn [^java.sql.Connection c]
-      (when c (.close c))
-      (when db-spec (#'jdbc/get-connection db-spec)))))
-
-(defn close-global-connection
-  "Closes global connection."
+(defn get-current-db
+  "Returns current database. For internal use only!"
   []
-  (open-global-connection nil))
+  *db*)
+
+(defmacro with-connection
+  [db & body]
+  `(let [db# ~db
+         conn# (jdbc/db-find-connection db#)
+         bfn# (fn [] ~@body)]
+     (if (nil? conn#)
+       (with-open [^java.sql.Connection conn# (jdbc/get-connection db#)]
+         (let [new-db# (jdbc/add-connection db# conn#)]
+           (with-bindings* {#'*db* new-db#} bfn#)))
+       (with-bindings* {#'*db* db#} bfn#))))
