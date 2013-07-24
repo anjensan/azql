@@ -5,19 +5,18 @@
   (:require [clojure.java.jdbc :as jdbc]))
 
 (defmacro with-azql-context
-  "Executes code in azql context (global connection, naming strategy ect.).
-   All public functions automatically call this macro.
-   For internal usage only!"
+  "Executes code in azql context (global connection, naming strategy ect).
+   All public functions automatically call this macro. For internal use only!"
   [db & body]
   `(->> (do ~@body)
         (with-dialect-naming-strategy)
         (with-recognized-dialect)
-        (with-connection ~db)))
+        (with-azql-connection ~db)))
 
 (defn sql
   "Converts object to Sql."
-  ([db & args]
-    (with-azql-context db (apply sql* args))))
+  [db & args]
+  (with-azql-context db (apply sql* args)))
 
 (defrecord Select
   [tables joins fields where
@@ -42,7 +41,7 @@
   SqlLike
   (as-sql [this] (as-sql (render-update this))))
 
-(defrecord CombinedQuery
+(defrecord CombinedSelect
   [type queries order limit offset modifier]
   Query
   SqlLike
@@ -62,7 +61,7 @@
   [v]
   (defmethod print-method v [s ^Appendable w]
     (.append w (interpolate-sql s)))
-  Select Insert Update Delete CombinedQuery)
+  Select Insert Update Delete CombinedSelect)
 
 (defmethod print-method LazySelect [^LazySelect s ^Appendable w]
   (.append w (interpolate-sql ((.content-fn s)))))
@@ -227,7 +226,7 @@
   "Adds 'order by' section to query."
   ([relation column] (order* relation column nil))
   ([{order :order :as relation} column dir]
-    (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
+    (check-type relation [Select CombinedSelect] "Firt argument must be a Select")
     (check-argument
       (contains? #{:asc :desc nil} dir)
       (str "Invalid sort direction " dir))
@@ -251,7 +250,7 @@
 (defn modifier
   "Attaches a modifier to the query. Modifier should be keyword or raw sql."
   [{cm :modifier :as relation} m]
-  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
+  (check-type relation [Select CombinedSelect] "Firt argument must be a Select")
   (check-argument (nil? cm) (str "Relation already has modifier " cm))
   (check-argument (or (sql? m) (#{:distinct :all} m))
                   "Invalid modifier, expected :distinct, :all or raw sql.")
@@ -260,14 +259,14 @@
 (defn limit
   "Limits number of rows."
   [{ov :limit :as relation} v]
-  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
+  (check-type relation [Select CombinedSelect] "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has limit " ov))
   (assoc relation :limit v))
 
 (defn offset
   "Adds an offset to query."
   [{ov :offset :as relation} v]
-  (check-type relation [Select CombinedQuery] "Firt argument must be a Select")
+  (check-type relation [Select CombinedSelect] "Firt argument must be a Select")
   (check-state (nil? ov) (str "Relation already has offset " ov))
   (assoc relation :offset v))
 
@@ -285,12 +284,12 @@
 (defn add-query
   "Adds new select to combined query."
   [combined query]
-  (check-type combined [CombinedQuery] "Firt argument must be a CombinedQuery")
+  (check-type combined [CombinedSelect] "Firt argument must be a CombinedSelect")
   (assoc combined :queries (conj (or (:queries combined) []) query)))
 
 (defn combine*
   [type]
-  (assoc #azql.core.CombinedQuery{} :type type))
+  (assoc #azql.core.CombinedSelect{} :type type))
 
 (defmacro combine
   "Creates new select combined query."
@@ -332,7 +331,7 @@
      (let [sql-params# (#'to-sql-params ~relation)
            f# (fn [~v] ~@body)]
        (jdbc/query
-        (get-current-db)
+        *db*
         sql-params#
         :result-set-fn f#
         :row-fn identity))))
@@ -342,7 +341,7 @@
   ([db relation]
      (with-azql-context db
        (jdbc/query
-        (get-current-db)
+        *db*
         (to-sql-params relation)
         :result-set-fn vec))))
 
@@ -366,7 +365,7 @@
   ([db relation]
      (with-azql-context db
        (jdbc/query
-        (get-current-db)
+        *db*
         (to-sql-params relation)
         :result-set-fn one-result))))
 
@@ -375,7 +374,7 @@
   ([db relation]
      (with-azql-context db
        (jdbc/query
-        (get-current-db)
+        *db*
         (to-sql-params relation)
         :result-set-fn single-result))))
 
@@ -388,7 +387,7 @@
        (let [{s :sql a :args} (sql* query)]
          (first
           (jdbc/db-do-prepared
-           (get-current-db) false s a))))))
+           *db* false s a))))))
 
 (defn- batch-arg?
   [v]
@@ -403,7 +402,7 @@
         (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
         "Can't return generated keys for batch query.")
       (jdbc/db-do-prepared-return-keys
-       (get-current-db)
+       *db*
        false
        s
        (map #(if (batch-arg? %) (first %) %) a)))))
@@ -429,7 +428,7 @@
   [db query]
   (with-azql-context db
     (let [{s :sql a :args} (sql* query)]
-      (apply jdbc/db-do-prepared (get-current-db) false s (prepare-batch-arguments a)))))
+      (apply jdbc/db-do-prepared *db* false s (prepare-batch-arguments a)))))
 
 (defn values
   "Adds records to insert statement."
@@ -498,8 +497,64 @@
   [^String pattern]
   (azql.expression/escape-like-pattern pattern))
 
+; transactions
+
+(defn with-connection*
+  "Run function with open connection."
+  [db body-fn]
+  (check-state (not (jdbc/db-find-connection db)) "Connection already exists!")
+  (with-open [^java.sql.Connection conn (jdbc/get-connection db)]
+    (body-fn (jdbc/add-connection db conn))))
+
+(defmacro with-connection
+  "Executes block of code with open connection."
+  [binding & body]
+  `(with-connection* ~(second binding) (fn [~(first binding)] ~@body)))
+
+(defn- parse-isolation-level
+  [isolation-level]
+  (get
+   {:none java.sql.Connection/TRANSACTION_NONE,
+    :read-committed java.sql.Connection/TRANSACTION_READ_COMMITTED,
+    :read-uncommitted java.sql.Connection/TRANSACTION_READ_UNCOMMITTED,
+    :repeatable-read java.sql.Connection/TRANSACTION_REPEATABLE_READ,
+    :serializable java.sql.Connection/TRANSACTION_SERIALIZABLE}
+   isolation-level isolation-level))
+
+(defn transaction*
+  "Evaluates func in scope of transaction on open database connection."
+  ([db-conn isolation-level body-fn]
+     (io!
+      (check-state (jdbc/db-find-connection db-conn)
+                   "No open connection found! Use 'with-connection' macro.")
+      (let [^java.sql.Connection c (jdbc/db-connection db-conn)
+            old-il (.getTransactionIsolation c)]
+        (check-state (.getAutoCommit c) "Connection is not in autocommit mode.")
+        (when-not (nil? isolation-level)
+          (.setTransactionIsolation c (parse-isolation-level isolation-level)))
+        (try
+          (.setAutoCommit c false)
+          (let [res (body-fn)] (.commit c) res)
+          (catch Throwable t
+            (.rollback c))
+          (finally
+            (when-not (nil? isolation-level)
+              (.setTransactionIsolation c old-il))
+            (.setAutoCommit c true))))))
+  ([db-conn body-fn]
+     (transaction* db-conn nil body-fn)))
+
+(defmacro transaction
+  "Evaluates body in the context of a transaction on the specified database connection."
+  [ilevel-or-db & body]
+  (let [[il db body]
+        (if (or (integer? ilevel-or-db) (keyword? ilevel-or-db))
+          [ilevel-or-db (first body) (rest body)]
+          [nil ilevel-or-db body])]
+  `(transaction* ~db ~il (fn [] ~@body))))
+
 ; query-forms
-(register-subquery-var #'select)
+(register-subquery-var #'select)        ;
 (register-subquery-var #'table)
 (register-subquery-var #'combine)
 (register-subquery-var #'union)

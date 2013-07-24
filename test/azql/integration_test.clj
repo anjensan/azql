@@ -41,20 +41,21 @@
 ;; FIXME
 (defn create-testdb-fixture
   [f]
-  (with-open [conn (jdbc/get-connection database-connection)]
-    (let [new-db (jdbc/add-connection database-connection conn)]
-      (with-bindings {#'jdbc/*db* (-> new-db (assoc :level 0) (assoc :rollback (atom false)))
-                      #'db new-db}
-        (jdbc/with-quoted-identifiers database-quote-symbol
-          (create-database)
-          (populate-database))
-        (f)))))
+  (with-connection [conn database-connection]
+    (with-bindings {#'jdbc/*db* conn, #'db conn}
+      (jdbc/with-quoted-identifiers database-quote-symbol
+        (create-database)
+        (populate-database))
+      (f))))
 
 (defn transaction-fixture
   [f]
-  (jdbc/transaction
-    (jdbc/set-rollback-only)
-   (f)))
+  (try
+    (transaction db
+      (f)
+      (throw (ex-info "rollback" {::x 1})))
+    (catch Exception e
+      (when-not (::x (ex-data e)) (throw e)))))
 
 (use-fixtures :once create-testdb-fixture)
 (use-fixtures :each transaction-fixture)
@@ -204,3 +205,15 @@
     "update all records"
     (update! db :users (setf :name "XXX"))
     (is (= 3 (count (fetch-all db (select (from :users) (where (= :name "XXX")))))))))
+
+(deftest test-transaction
+  (testing
+      "transaction ok")
+  (testing
+      "nested transactions")
+  (testing
+      "transaction level")
+  (testing
+      "transaction without connection")
+  (testing
+      "transaction rollback"))

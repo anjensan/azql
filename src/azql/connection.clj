@@ -2,14 +2,9 @@
   (:use [azql util])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def ^:dynamic ^:private ^java.sql.Connection *db* nil)
+(def ^:dynamic ^java.sql.Connection *db* nil)
 
-(defn get-current-db
-  "Returns current database. For internal use only!"
-  []
-  *db*)
-
-(defmacro with-connection
+(defmacro with-azql-connection
   [db & body]
   `(let [db# ~db
          conn# (jdbc/db-find-connection db#)

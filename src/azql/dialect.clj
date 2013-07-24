@@ -67,6 +67,6 @@
 (defn with-recognized-dialect*
   "Recognizes dialect of current connection and adds it to jdbc/*db*."
   [f]
-  (if-let [d (or *dialect* (db-connection-dialect (get-current-db)))]
+  (if-let [d (or *dialect* (db-connection-dialect *db*))]
     (binding [*dialect* d] (f))
     (f)))
