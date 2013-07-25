@@ -1,4 +1,4 @@
-(defproject azql "0.1.9"
+(defproject azql "0.2.0-SNAPSHOT"
   :description "DSL for SQL generation"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
