@@ -58,23 +58,24 @@
 
 (defndialect render-from
   [{:keys [tables joins]}]
-  (check-argument (not (empty? joins)) "No tables specified")
-  (compose-sql
-    FROM
-    (let [[a jn] (first joins)
-          t (tables a)]
-      (check-state (contains? #{nil :cross} jn) "First join should be CROSS JOIN.")
-      (render-table [a t]))
-    (compose-sql*
+  (if (not (empty? joins))
+    (compose-sql
+     FROM
+     (let [[a jn] (first joins)
+           t (tables a)]
+       (check-state (contains? #{nil :cross} jn) "First join should be CROSS JOIN.")
+       (render-table [a t]))
+     (compose-sql*
       (for [[a jn c] (rest joins) :let [t (tables a)]]
         (if (nil? jn)
           (compose-sql NOSP COMMA (render-table [a t]))
           (compose-sql
-            (render-join-type jn)
-            (render-table [a t])
-            (if c
-              (compose-sql ON (render-expression c))
-              NONE)))))))
+           (render-join-type jn)
+           (render-table [a t])
+           (if c
+             (compose-sql ON (render-expression c))
+             NONE))))))
+    NONE))
 
 (defndialect render-where
   [{where :where}]

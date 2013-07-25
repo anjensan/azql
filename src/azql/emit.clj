@@ -237,7 +237,7 @@
   [n]
   (check-argument
     (keyword-or-string? n)
-    "Invalid alias, extected keyword or string.")
+    (str "Invalid alias " n ", expected keyword or string."))
   (keyword n))
 
 (def surrogate-alias-counter (atom 0))
