@@ -177,7 +177,10 @@
 (defndialect render-update-fields
   [{:keys [fields]}]
   (comma-list
-    (map (fn [[n c]] (compose-sql SET (qname n) EQUALS (render-expression-or-subselect c))) (reverse fields))))
+    (map (fn [[n c]]
+           (compose-sql
+            SET (qname n) EQUALS (render-expression-or-subselect c)))
+         (reverse fields))))
 
 (defndialect render-update
   [{t :table :as query}]

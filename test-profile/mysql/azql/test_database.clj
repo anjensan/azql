@@ -43,7 +43,7 @@
 (defmethod guess-dialect :mysql [_]
   ::mysql)
 
-(defmethod entity-naming-strategy ::mysql []
-  (fn [x] (str \` x \`)))
+(defmethod quote-name ::mysql [x]
+  (str \` x \`))
 
 (def database-quote-symbol \`)

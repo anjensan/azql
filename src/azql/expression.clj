@@ -1,11 +1,10 @@
 (ns azql.expression
   (:use [azql util dialect emit]))
 
-(defn expression-synonym
-  "Replace synonym with proper function/operator name.
-   This function know nothing about dialects."
-  [s]
-  (get '{<> not=, == =, || str} s s))
+(def
+  ^{:doc "Replace synonym with proper function/operator name.
+          This function know nothing about dialects."}
+  expression-synonym-map '{<> not=, == =, || str})
 
 (defndialect render-true [] (raw "(0=0)"))
 (defndialect render-false [] (raw "(0=1)"))
@@ -45,7 +44,7 @@
   [s]
   (when-not (symbol? s)
     (illegal-argument "Illegal function name '" s "', extected symbol"))
-  (expression-synonym s))
+  (get expression-synonym-map s s))
 
 (defn- map-style-expression?
   [m]

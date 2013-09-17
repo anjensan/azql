@@ -39,7 +39,6 @@
 (def database-dialect ::pgsql)
 (register-dialect ::pgsql)
 
-(defmethod guess-dialect :postgresql [_]
-  ::pgsql)
+(defmethod guess-dialect :postgresql [_] ::pgsql)
 
 (def database-quote-symbol \")

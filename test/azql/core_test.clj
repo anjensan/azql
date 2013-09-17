@@ -5,7 +5,7 @@
 ;; custom dialect
 (register-dialect ::dialect)
 (deffunctions ::dialect fun sin cos)
-(defmethod entity-naming-strategy ::dialect [] str)
+(defmethod emit-qname ::dialect [n] (name n))
 (use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::dialect] (f))))
 
 (deftest test-simple-queries

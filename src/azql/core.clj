@@ -9,7 +9,6 @@
    All public functions automatically call this macro. For internal use only!"
   [db & body]
   `(->> (do ~@body)
-        (with-dialect-naming-strategy)
         (with-recognized-dialect)
         (with-azql-connection ~db)))
 
@@ -183,10 +182,12 @@
   [join-name join-key]
   (defmacro join-name
    ([relation alias table cond]
-     `(join* ~relation ~join-key ~alias ~table ~(prepare-macro-expression cond &env)))
+     `(join* ~relation ~join-key ~alias ~table
+             ~(prepare-macro-expression cond &env)))
    ([relation table cond]
      `(let [table# ~table]
-        (join* ~relation ~join-key nil table# ~(prepare-macro-expression cond &env)))))
+        (join* ~relation ~join-key nil table#
+               ~(prepare-macro-expression cond &env)))))
   join-inner :inner, join :inner,
   join-right :right, join-left :left, join-full :full)
 
@@ -236,8 +237,10 @@
 
 (defmacro order
   "Adds 'order by' section to query."
-  ([relation column] `(order* ~relation ~(prepare-macro-expression column &env)))
-  ([relation column dir] `(order* ~relation ~(prepare-macro-expression column &env) ~dir)))
+  ([relation column]
+     `(order* ~relation ~(prepare-macro-expression column &env)))
+  ([relation column dir]
+     `(order* ~relation ~(prepare-macro-expression column &env) ~dir)))
 
 (defn group
   "Adds 'group by' section to query."
@@ -545,7 +548,8 @@
      (transaction* db-conn nil body-fn)))
 
 (defmacro transaction
-  "Evaluates body in the context of a transaction on the specified database connection."
+  "Evaluates body in the context of a transaction
+   on the specified database connection."
   [ilevel-or-db & body]
   (let [[il db body]
         (if (or (integer? ilevel-or-db) (keyword? ilevel-or-db))

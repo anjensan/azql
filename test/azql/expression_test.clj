@@ -6,7 +6,7 @@
 (register-dialect ::dialect)
 (deffunctions ::dialect fun sin funn)
 (deffunctions ::dialect {funfun f} sin cos sqrt {ffun fun} my-fun)
-(defmethod entity-naming-strategy ::dialect [] str)
+(defmethod emit-qname ::dialect [n] (name n))
 (use-fixtures :once (fn [f] (binding [azql.dialect/*dialect* ::dialect] (f))))
 
 (deftest test-render-expression

@@ -20,12 +20,9 @@
 
   (testing
     "emit qnames"
-    (is (= "A.B" (emit-qname :A.B)))
-    (is (= "A.b.C") (emit-qname :A.b.C))
-    (with-dialect-naming-strategy
-      (is (= "\"A\".\"B\"" (emit-qname :A.B)))
-      (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
-      (is (= "\"Abc\"" (emit-qname :Abc)))))
+    (is (= "\"A\".\"B\"" (emit-qname :A.B)))
+    (is (= "\"A\".\"b\".\"C\"") (emit-qname :A.b.C))
+    (is (= "\"Abc\"" (emit-qname :Abc))))
 
   (testing
     "parse qualifier"
@@ -42,10 +39,10 @@
   (testing
     "default implementations of SqlLike"
     (are [s z] (= s (:sql (as-sql z)))
-         "keyword" :keyword
+         "\"keyword\"" :keyword
          "symbol" 'symbol
          " A~,~B " (symbol " A~,~B ")
-         "a ~ b,c" (keyword "a ~ b,c")
+         "\"a ~ b,c\"" (keyword "a ~ b,c")
          "?" 1
          "?" "string"
          "?" nil

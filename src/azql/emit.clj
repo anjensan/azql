@@ -5,26 +5,31 @@
   (:require [clojure.java.jdbc :as jdbc])
   (:import java.util.regex.Matcher))
 
-; dialects
+; quoting
 
-(defndialect entity-naming-strategy
-  "Returns entity naming strategy for clojure/jdbc."
-  []
-  (fn [x] (str \" x \")))
+(defndialect quote-name
+  "Quote identifier with"
+  [x]
+  (str \" x \"))
 
-(defmacro with-dialect-naming-strategy
-  "Registers register AZQL naming strategy in `clojure/jdbc.`"
-  [& body]
-  `(with-dialect-naming-strategy* (fn [] ~@body)))
+(defn- quote-name-or-star
+  [x]
+  (let [x (str x)]
+    (if (= x "*")
+      x
+      (quote-name x))))
 
-(defn with-dialect-naming-strategy*
-  "Registers register AZQL naming strategy in `clojure/jdbc.`"
-  [f]
-  (if (thread-bound? #'jdbc/*as-str*)
-    (f)
-    (with-bindings* {#'jdbc/*as-str* (entity-naming-strategy)} f)))
+(defndialect emit-qname
+  "Parses and escapes qualified & quoted name.
+   Ex :a.val => \"a\".\"val\"."
+  [qn]
+  (let [n (name qn)
+        i (.indexOf n (int \.))]
+    (if (= -1 i)
+      (quote-name-or-star n)
+      (s/join "." (map quote-name-or-star (.split n "\\."))))))
 
-; types
+; protocols
 
 (defprotocol SqlLike
   (as-sql [this] "Converts object to 'Sql'."))
@@ -38,6 +43,7 @@
 (defrecord ComposedSql [sqls meta]
   SqlLike
   (as-sql [this] (composedsql-as-sql this)))
+
 
 ; ctors
 
@@ -62,36 +68,22 @@
 
 (defn parse-qname
   "Splits qualified name and return first part. Ex :a.val => [:a :val]."
-  [qname]
-  (let [n (name qname)
+  [qn]
+  (let [n (name qn)
         rp (s/split n #"\.")]
     (mapv keyword rp)))
 
 (defn qualifier
   "Returns first part of qualified name. Ex: :a.val => :a, :x => nil."
-  [qname]
-  (when qname
-    (let [n (parse-qname qname)]
+  [qn]
+  (when qn
+    (let [n (parse-qname qn)]
       (when (> (count n) 1)
         (first n)))))
 
-(defn quote-name
-  "Quotes name. Uses current jdbc naming strategy."
-  [s]
-  (let [s (name s)]
-    (if (= s "*") s (#'jdbc/*as-str* s))))
-
-(defn emit-qname
-  "Parses and escapes qualified name.
-   Uses current jdbc naming strategy.
-   Ex :a.val => \"a\".\"val\"."
-  [qname]
-  (jdbc/as-str quote-name qname))
-
 (defn qname
   "Constructs qualified name."
-  ([qn] (Sql. (emit-qname qn) nil))
-  ([qn alias] (Sql. (emit-qname [qn alias]) nil)))
+  ([qn] (Sql. (emit-qname qn) nil)))
 
 (def ^{:doc "Empty token. Preserve space."} NOSP (raw ""))
 (def ^{:doc "Empty token."} NONE (raw ""))
@@ -137,8 +129,7 @@
   ([v]
     (if (sql? v)
       v
-      (with-dialect-naming-strategy
-        (as-sql v))))
+      (as-sql v)))
   ([v & r]
     (sql* (compose-sql* v r))))
 
@@ -281,15 +272,14 @@
   "Replaces placeholders with actual values.
    For debug purposes only!"
   [q]
-  (with-dialect-naming-strategy
-    (let [{ss :sql as :args} (as-sql q)]
-      (reduce
-        (fn [s a]
-          (s/replace-first
-            s #"\?"
-            (Matcher/quoteReplacement
-              (format-interpolated-sql-arg a))))
-        ss as))))
+  (let [{ss :sql as :args} (as-sql q)]
+    (reduce
+      (fn [s a]
+        (s/replace-first
+          s #"\?"
+          (Matcher/quoteReplacement
+            (format-interpolated-sql-arg a))))
+      ss as)))
 
 (defn- parse-placeholders
   [query]
