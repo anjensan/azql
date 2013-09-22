@@ -2,13 +2,13 @@
 
 AZQL is a SQL like DSL for Clojure.
 
-Main goals of this project:
+Main ideas of this project:
 
-- no shema restrictions, orm-mappings etc.
-- DSL should be closer to native SQL as much as possible
-- no fake optimizations (modern DBs are clever enough)
-- protection from injections, but not from invalid queries
-- sometimes we want to include vendor-specific parts into queries
+- no shema restrictions, orm-mappings etc;
+- DSL should be closer to native SQL as much as possible;
+- no fake optimizations (modern DBs are clever enough);
+- protection from injections, but not from invalid queries;
+- sometimes we want to include vendor-specific parts into queries.
 
 
 ## Installation
@@ -54,7 +54,7 @@ Library provides some alternatives:
 - `fetch-single` fetches only single value (one row and one column);
 - `with-fetch` executes arbitary code with opened `resultset-seq`;
 
-Fox example:
+Example:
 
 ```clj
 (with-fetch db [f (table :Users)]
@@ -106,7 +106,7 @@ It is possible to use vendor-specific joins:
 ```clj
 (select
   (from :a :TableOne)
-  (join* (raw "COOL JOIN") :b :TableTwo (= :b.x = :a.y)))
+  (join* (raw "MEGA JOIN") :b :TableTwo (= :b.x = :a.y)))
 ```
 
 ### Ordering
@@ -157,8 +157,7 @@ ALL, ANY and SOME are supported also.
   (where {:u.id (any :id (table :ActiveUsers))}))
 ```
 
-Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select' & 'table'.
-So, you must use 'select' in you subqueries or pass them as a value. Example:
+Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select' & 'table'.  So, you must use 'select' in you subqueries or pass them as a value. Example:
 
 ```clj
 (let [sq (fields (table :ActiveUsers) [:id])]
@@ -207,7 +206,8 @@ Library provides shortcuts `union`, `intersect` and `except`.
 ### CRUD
 
 Library supports all CRUD operations.
-Intert new records:
+
+Insert new records:
 
 ```clj
 (insert! :table
