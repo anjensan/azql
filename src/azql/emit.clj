@@ -8,7 +8,7 @@
 ; quoting
 
 (defndialect quote-name
-  "Quote identifier with"
+  "Quote identifier."
   [x]
   (str \" x \"))
 
@@ -21,7 +21,7 @@
 
 (defndialect emit-qname
   "Parses and escapes qualified & quoted name.
-   Ex :a.val => \"a\".\"val\"."
+   Example :a.val => \"a\".\"val\"."
   [qn]
   (let [n (name qn)
         i (.indexOf n (int \.))]
@@ -179,7 +179,7 @@
   clojure.lang.Symbol
   (as-sql [this] (raw (name this)))
 
-  clojure.lang.Ref
+  clojure.lang.ARef
   (as-sql [this] (as-sql (deref this)))
 
   Object
@@ -237,7 +237,7 @@
   "Generates surrogate alias."
   []
   (let [k (swap! surrogate-alias-counter  #(-> % inc (mod 1000000)))]
-    (keyword (format "__%06d" k))))
+    (keyword (format "__%08d" k))))
 
 (defn surrogate-alias?
   "Checks if alias is surrogate."
@@ -337,7 +337,7 @@
 ; standard keywords
 
 (do-template
-  [kname] (def kname (raw (str (s/replace (name 'kname) #"_" " "))))
+  [kname] (def kname ^:const (raw (str (s/replace (name 'kname) #"_" " "))))
 
   SELECT, FROM, WHERE, JOIN, IN, NOT_IN, ON, AND, OR, NOT, NULL, AS,
   IS_NULL, IS_NOT_NULL, ORDER_BY, GROUP_BY, HAVING, DESC, ASC, SET,
@@ -349,7 +349,7 @@
   UNION, INTERSECT, EXCEPT, CONCAT)
 
 (do-template
-  [kname value] (def kname (raw value))
+  [kname value] (def ^:const kname (raw value))
 
   ASTERISK "*", QMARK "?", EQUALS "=", NOT_EQUALS "<>",
   LESS "<", GREATER ">", LESS_EQUAL "<=", GREATER_EQUAL ">=",
