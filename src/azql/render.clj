@@ -136,24 +136,19 @@
     (render-limit relation)))
 
 (defndialect render-delete
-  [query]
+  [{t :table :as query}]
   (compose-sql
-    DELETE
-    (render-from query)
+    DELETE FROM
+    (qname t)
     (render-where query)))
-
-(defndialect render-into
-  [{t :table}]
-  (compose-sql
-    INTO (qname t)))
 
 (defn collect-fields
   [records]
   (reduce cset/union (map (comp set keys) records)))
 
 (defndialect render-values
-  [{fields :fields records :records}]
-  (let [fields (if fields fields (collect-fields records))]
+  [{records :records}]
+  (let [fields (collect-fields records)]
     (->Sql
       (:sql
         (sql*
@@ -168,24 +163,24 @@
         (map (partial get (first records)) fields)))))
 
 (defndialect render-insert
-  [query]
+  [{t :table :as query}]
   (compose-sql
-    INSERT
-    (render-into query)
+    INSERT INTO
+    (qname t)
     (render-values query)))
 
 (defndialect render-update-fields
-  [{:keys [fields]}]
+  [{:keys [field-exprs]}]
   (comma-list
     (map (fn [[n c]]
            (compose-sql
             SET (qname n) EQUALS (render-expression-or-subselect c)))
-         (reverse fields))))
+         (reverse field-exprs))))
 
 (defndialect render-update
   [{t :table :as query}]
   (compose-sql
-    UPDATE (render-table t)
+    UPDATE (qname t)
     (render-update-fields query)
     (render-where query)))
 

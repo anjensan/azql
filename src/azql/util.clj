@@ -34,12 +34,18 @@
   `(when (not ~c)
      (illegal-state ~@message)))
 
+(defn isinstance-or-satisfies?
+  [class-or-protocol obj]
+  (if (class? class-or-protocol)
+    (instance? class-or-protocol obj)
+    (satisfies? class-or-protocol obj)))
+
 (defmacro check-type
   [val types & message]
   (let [vs (gensym)]
     `(let [~vs ~val]
        (check-argument
-         (or ~@(map (fn [t] (list `instance? t vs)) types))
+         (or ~@(map (fn [t] (list `isinstance-or-satisfies? t vs)) types))
          ~@message))))
 
 (def ^:private subquery-vars #{})

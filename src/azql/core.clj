@@ -25,18 +25,15 @@
   SqlLike
   (as-sql [this] (as-sql (render-select this))))
 
-(defrecord Insert [table fields records]
-  Query
+(defrecord Insert [table records]
   SqlLike
   (as-sql [this] (as-sql (render-insert this))))
 
-(defrecord Delete [tables joins where]
-  Query
+(defrecord Delete [table where]
   SqlLike
   (as-sql [this] (as-sql (render-delete this))))
 
-(defrecord Update [table fields where]
-  Query
+(defrecord Update [table field-exprs where]
   SqlLike
   (as-sql [this] (as-sql (render-update this))))
 
@@ -162,7 +159,7 @@
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as query} type alias table cond]
-  (check-type query [Select Delete] "Firt argument must be a Query")
+  (check-type query [Query] "Firt argument must be a Query")
   (let [t (unwrap-single-table table)
         a (as-alias (or alias t))]
     (check-state (not (contains? tables a)) (str "Relation already has table " a))
@@ -194,7 +191,7 @@
 (defn fields*
   "Adds field list to query."
   [query fd]
-  (check-type query [Select Insert] "Firt argument must be a Query")
+  (check-type query [Select] "Firt argument must be a Query")
   (check-argument (nil? (:fields query)) "Relation already has specified fields.")
   (assoc query :fields fd))
 
@@ -442,26 +439,21 @@
 
 (defn delete*
   "Creates new delete statement."
-  ([] (->Delete nil nil nil))
-  ([table] (from (delete*) table))
-  ([alias table] (from (delete*) alias table)))
+  ([table] (->Delete (unwrap-single-table table) nil)))
 
 (defn insert*
   "Creates new insert statement."
-  ([table] (->Insert (unwrap-single-table table) nil []))
+  ([table] (->Insert (unwrap-single-table table) []))
   ([table records] (values (insert* table) records)))
 
 (defn update*
   "Creates new update statement."
-  ([table]
-    (let [t (unwrap-single-table table)]
-      (update* t t)))
-  ([alias table] (->Update [alias table] nil nil)))
+  ([table] (->Update (unwrap-single-table table) nil nil)))
 
 (defn setf*
   "Adds field to update statement."
   [query fname value]
-  (assoc query :fields (assoc (:fields query) fname value)))
+  (assoc query :field-exprs (assoc (:field-exprs query) fname value)))
 
 (defmacro setf
   "Adds field to update statement."
@@ -516,13 +508,14 @@
 
 (defn- parse-isolation-level
   [isolation-level]
-  (get
-   {:none java.sql.Connection/TRANSACTION_NONE,
-    :read-committed java.sql.Connection/TRANSACTION_READ_COMMITTED,
-    :read-uncommitted java.sql.Connection/TRANSACTION_READ_UNCOMMITTED,
-    :repeatable-read java.sql.Connection/TRANSACTION_REPEATABLE_READ,
-    :serializable java.sql.Connection/TRANSACTION_SERIALIZABLE}
-   isolation-level isolation-level))
+  (int
+   (get
+    {:none java.sql.Connection/TRANSACTION_NONE,
+     :read-committed java.sql.Connection/TRANSACTION_READ_COMMITTED,
+     :read-uncommitted java.sql.Connection/TRANSACTION_READ_UNCOMMITTED,
+     :repeatable-read java.sql.Connection/TRANSACTION_REPEATABLE_READ,
+     :serializable java.sql.Connection/TRANSACTION_SERIALIZABLE}
+    isolation-level isolation-level)))
 
 (defn transaction*
   "Evaluates func in scope of transaction on open database connection."

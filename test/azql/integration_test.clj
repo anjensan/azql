@@ -185,7 +185,7 @@
     (insert! db :users {:id 10 :name "New User" :dob (sql-date #inst"1988-03-21T00:00")})
     (fetch-all db (select (from :users)))
     (is (fetch-one db (select (from :users) (where (= :name "New User")))))
-    (delete! db (from :users) (where (= :name "New User")))
+    (delete! db :users (where (= :name "New User")))
     (is (not (fetch-one db (select (from :users) (where (= :name "New User")))))))
 
   (testing
@@ -195,7 +195,7 @@
      (values {:id 11 :text "New Post 1"})
      (values {:id 12 :text "New Post 2" :userid 1}))
     (is (= 1 (fetch-single db (select (from :posts) (fields [:userid]) (where (= :text "New Post 2"))))))
-    (delete! db (from :posts) (where (in? :text ["New Post 1" "New Post 2"])))
+    (delete! db :posts (where (in? :text ["New Post 1" "New Post 2"])))
     (is (empty? (fetch-all db (select (from :posts) (where (= :text "New Post 2"))))))))
 
 (deftest test-update

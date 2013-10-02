@@ -326,13 +326,9 @@
     "delete statement"
     (are [s z] (= s (:sql (sql* z)))
          "DELETE FROM X"
-         (-> (delete*) (from :X))
+         (delete* :X)
          "DELETE FROM X WHERE (id = ?)"
-         (-> (delete*) (from :X) (where {:id 1}))
-         "DELETE FROM X INNER JOIN Y ON (a = b) WHERE (id = ?)"
-         (-> (delete*) (from :X) (join :Y {:a :b}) (where {:id 1}))
-         "DELETE FROM X AS x INNER JOIN Y AS y ON (x.a = y.b) WHERE (id = ?)"
-         (-> (delete*) (from :x :X) (join :y :Y {:x.a :y.b}) (where {:id 1})))))
+         (-> (delete* :X) (where {:id 1})))))
 
 (deftest test-update
   (testing
