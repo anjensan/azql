@@ -1,7 +1,5 @@
 (ns azql.test-database
-  (:use azql.dialect)
-  (:use azql.emit)
-  (:require [clojure.java.jdbc :as jdbc]))
+  (:use [azql core dialect emit]))
 
 (def database-connection
   {:classname "com.mysql.jdbc.Driver"
@@ -10,38 +8,43 @@
    :password "test"
    :subname "//localhost/azql_test"})
 
+(defn- do-commands
+  [db & commands]
+  (doseq [c commands]
+    (execute! db (format-sql c))))
+
 (defn create-database
-  []
+  [db]
+  (do-commands db
 
-  (jdbc/do-commands "DROP TABLE IF EXISTS users")
-  (jdbc/do-commands "DROP TABLE IF EXISTS posts")
-  (jdbc/do-commands "DROP TABLE IF EXISTS comments")  
+   "DROP TABLE IF EXISTS users"
+   "CREATE TABLE users (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(50),
+      dob DATE
+    )"
 
-  (jdbc/create-table
-    :users
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:name "VARCHAR(50)"]
-    [:dob "DATE"])
+   "DROP TABLE IF EXISTS posts"
+   "CREATE TABLE posts (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      text VARCHAR(10000),
+      userid INT
+    )"
 
-  (jdbc/create-table
-    :posts
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(10000)"]
-    [:userid "INT"])
-
-  (jdbc/create-table
-    :comments
-    [:id "INT" "PRIMARY KEY" "AUTO_INCREMENT"]
-    [:text "VARCHAR(500)"]
-    [:userid "INT"]
-    [:postid "INT"]
-    [:parentid "INT"]))
+   "DROP TABLE IF EXISTS comments"
+   "CREATE TABLE comments (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      text VARCHAR(500),
+      userid INT,
+      postid INT,
+      parentid INT
+    )"
+   ))
 
 (def database-dialect ::mysql)
 (register-dialect ::mysql)
 
-(defmethod guess-dialect :mysql [_]
-  ::mysql)
+(defmethod guess-dialect :mysql [_] ::mysql)
 
 (defmethod quote-name ::mysql [x]
   (str \` x \`))

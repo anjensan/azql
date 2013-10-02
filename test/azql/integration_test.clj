@@ -10,42 +10,46 @@
 (def ^:dynamic ^:private db)
 
 (defn populate-database
-  []
+  [db]
   ;; 3 users, each user has 3 comments & 2 or 0 posts
 
-  (jdbc/insert-rows
-    :users
-    [1 "Artyom" (sql-date #inst"1980-01-21")]
-    [2 "Anton" (sql-date #inst"1981-02-22")]
-    [3 "Arturas" (sql-date #inst"1982-03-23")])
+  (insert!
+   db :users
+   (values
+    (map (partial zipmap [:id :name :dob])
+         [[1 "Artyom" (sql-date #inst"1980-01-21")]
+          [2 "Anton" (sql-date #inst"1981-02-22")]
+          [3 "Arturas" (sql-date #inst"1982-03-23")]])))
 
-  (jdbc/insert-rows
-    :posts
-    [1 "first post" 1]
-    [2 "second post" 1]
-    [3 "the post" 2]
-    [4 "repost" 2])
+  (insert!
+   db :posts
+   (values
+    (map (partial zipmap [:id :text :userid])
+         [[1 "first post" 1]
+          [2 "second post" 1]
+          [3 "the post" 2]
+          [4 "repost" 2]])))
 
-  (jdbc/insert-rows
-    :comments
-    [1 "comment1" 1 1 nil]
-    [2 "comment1" 1 2 1]
-    [3 "comment1" 1 3 2]
-    [4 "comment1" 2 1 nil]
-    [5 "comment1" 2 2 nil]
-    [6 "comment1" 2 1 nil]
-    [7 "comment1" 3 1 nil]
-    [8 "comment1" 3 2 1]
-    [9 "comment9" 3 3 1]))
+  (insert!
+   db :comments
+   (values
+    (map (partial zipmap [:id :text :userid :postid :parentid])
+         [[1 "comment1" 1 1 nil]
+          [2 "comment1" 1 2 1]
+          [3 "comment1" 1 3 2]
+          [4 "comment1" 2 1 nil]
+          [5 "comment1" 2 2 nil]
+          [6 "comment1" 2 1 nil]
+          [7 "comment1" 3 1 nil]
+          [8 "comment1" 3 2 1]
+          [9 "comment9" 3 3 1]]))))
 
-;; FIXME
 (defn create-testdb-fixture
   [f]
   (with-connection [conn database-connection]
-    (with-bindings {#'jdbc/*db* conn, #'db conn}
-      (jdbc/with-quoted-identifiers database-quote-symbol
-        (create-database)
-        (populate-database))
+    (binding [db conn]
+      (create-database db)
+      (populate-database db)
       (f))))
 
 (defn transaction-fixture

@@ -296,7 +296,7 @@
    Replaces all keyword-like placeholders with '?'.
    Args should be a map."
   ([raw-sql]
-     (format-sql {}))
+     (format-sql raw-sql {}))
   ([raw-sql args]
      (let [al (parse-placeholders raw-sql)
            pq (replace-placeholders-with-mark raw-sql)

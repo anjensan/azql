@@ -1,6 +1,5 @@
 (ns azql.test-database
-  (:use azql.dialect)
-  (:require [clojure.java.jdbc :as jdbc]))
+  (:use [azql core dialect emit]))
 
 (def database-connection
   {:classname "org.postgresql.Driver"
@@ -9,32 +8,38 @@
    :password "test"
    :subname "//localhost/azql_test"})
 
+(defn- do-commands
+  [db & commands]
+  (doseq [c commands]
+    (execute! db (format-sql c))))
+
 (defn create-database
-  []
+  [db]
+  (do-commands db
 
-  (jdbc/do-commands "DROP TABLE IF EXISTS users")
-  (jdbc/do-commands "DROP TABLE IF EXISTS posts")
-  (jdbc/do-commands "DROP TABLE IF EXISTS comments")
+   "DROP TABLE IF EXISTS users"
+   "CREATE TABLE users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(50),
+      dob DATE
+    )"
 
-  (jdbc/create-table
-    :users
-    [:id "SERIAL" "PRIMARY KEY"]
-    [:name "VARCHAR(50)"]
-    [:dob "DATE"])
+   "DROP TABLE IF EXISTS posts"
+   "CREATE TABLE posts (
+      id SERIAL PRIMARY KEY,
+      text VARCHAR(10000),
+      userid INT
+    )"
 
-  (jdbc/create-table
-    :posts
-    [:id "SERIAL" "PRIMARY KEY"]
-    [:text "VARCHAR(10000)"]
-    [:userid "INT"])
-
-  (jdbc/create-table
-    :comments
-    [:id "SERIAL" "PRIMARY KEY"]
-    [:text "VARCHAR(500)"]
-    [:userid "INT"]
-    [:postid "INT"]
-    [:parentid "INT"]))
+   "DROP TABLE IF EXISTS comments"
+   "CREATE TABLE comments (
+      id SERIAL PRIMARY KEY,
+      text VARCHAR(500),
+      userid INT,
+      postid INT,
+      parentid INT
+    )"
+   ))
 
 (def database-dialect ::pgsql)
 (register-dialect ::pgsql)
