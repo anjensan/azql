@@ -11,7 +11,7 @@
 (deftest test-simple-queries
   (testing
     "simple selects from one table"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM X"
          (table :X)
          "SELECT * FROM X"
@@ -36,7 +36,7 @@
 
   (testing
     "select from 2 tables, full join"
-    (are [s z] (= s (:sql (sql*  z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A, B"
          (select (from :A) (from :B))
          "SELECT * FROM A AS a, B"
@@ -56,7 +56,7 @@
 
   (testing
     "simple where with one table"
-    (are [s z] (= s (:sql (sql*  z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM Table1 WHERE (id = ?)"
          (select (from "Table1") (where (= :id 10)))
          "SELECT * FROM Table1 WHERE ((id = ?) AND (email = ?))"
@@ -72,7 +72,7 @@
 
   (testing
     "where with aliases"
-    (are [s z] (= s (:sql (sql*  z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A AS a, B AS b WHERE (a.x = b.y)"
          (select (from :a :A) (from :b :B) (where (= :a.x :b.y)))
          "SELECT * FROM A, B, C WHERE ((A = a) AND ((A.x + C.y) > B.z))"
@@ -83,7 +83,7 @@
   (testing
     "select expression"
     (deffunctions sin)
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT (a + b) AS c FROM Table"
          (select (from "Table") (fields {:c (+ :a :b)}))
          "SELECT (a * b * c) AS z FROM Table"
@@ -94,7 +94,7 @@
 (deftest test-joins
   (testing
     "cross join"
-    (are [s z] (= s (:sql (sql*  z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A AS a CROSS JOIN B AS b"
          (select
            (from :a "A")
@@ -114,7 +114,7 @@
 
   (testing
     "inner joins"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A AS a INNER JOIN B AS b ON (a.x = b.y)"
          (select
            (from :a "A")
@@ -122,7 +122,7 @@
 
   (testing
     "outer joins"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A LEFT OUTER JOIN B ON (x = y)"
          (select (from :A) (join-left :B (= :x :y)))
          "SELECT * FROM A LEFT OUTER JOIN B AS b ON (x = y)"
@@ -140,7 +140,7 @@
 
   (testing
     "simple orderby"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A AS a ORDER BY x"
          (select (from :a "A") (order :x))
          "SELECT * FROM A AS a ORDER BY x ASC"
@@ -152,7 +152,7 @@
 
   (testing
     "order by expression"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A ORDER BY (x + y)"
          (select (from :A) (order (+ :x :y)))
          "SELECT * FROM A ORDER BY cos(sin(x)) DESC"
@@ -163,7 +163,7 @@
 (deftest test-limit-and-offset
   (testing
     "offset & limit"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM X LIMIT ?"
          (select (from "X") (limit 10))
          "SELECT * FROM X LIMIT ? OFFSET ?"
@@ -173,7 +173,7 @@
 
   (testing
     "simple grouping"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT a FROM T GROUP BY a"
          (select (from "T") (group [:a]) (fields [:a]))
          "SELECT a, b FROM T GROUP BY a, b"
@@ -181,7 +181,7 @@
 
   (testing
     "grouping with having on"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM T GROUP BY a HAVING (a > ?)"
          (select (from "T") (group [:a]) (having (> :a 1)))
          "SELECT a, b FROM T GROUP BY a, b HAVING ((a > ?) AND (? < b))"
@@ -191,7 +191,7 @@
 (deftest test-subqueries
   (testing
     "subqueries in joins"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A"
          (select (from (table :A)))
          "SELECT * FROM (SELECT * FROM A) AS a"
@@ -210,11 +210,11 @@
          (select {:a :a, :c (select [:b] (from :B) (where {:a :c}))} (from :A)))
     (is (re-matches
           #"SELECT \* FROM \(SELECT x FROM A\) AS __\d+"
-          (:sql (sql* (select (from (select [:x] (from :A)))))))))
+          (:sql (as-sql (select (from (select [:x] (from :A)))))))))
 
   (testing
     "operators `exists`, `any`, `all`"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM A WHERE (EXISTS (SELECT * FROM B WHERE (x = y)))"
          (select (from :A) (where (exists? (select (from :B) (where (= :x :y))))))
          "SELECT * FROM A WHERE (NOT EXISTS (SELECT * FROM B WHERE (A.x = B.x)))"
@@ -233,16 +233,16 @@
     "defselect azql queries"
 
     (defselect dst-select [] (from :X))
-    (is (= "SELECT * FROM X" (:sql (sql* (dst-select)))))
-    (is (= [] (:args (sql* (dst-select)))))
+    (is (= "SELECT * FROM X" (:sql (as-sql (dst-select)))))
+    (is (= [] (:args (as-sql (dst-select)))))
 
     (defselect dst-select [x y] (from :X) (where (and (= y :y) (= :x x))))
-    (is (= "SELECT * FROM X WHERE ((? = y) AND (x = ?))" (:sql (sql* (dst-select 1 2)))))
-    (is (= [2 1] (:args (sql* (dst-select 1 2)))))
+    (is (= "SELECT * FROM X WHERE ((? = y) AND (x = ?))" (:sql (as-sql (dst-select 1 2)))))
+    (is (= [2 1] (:args (as-sql (dst-select 1 2)))))
 
     (defselect ^:x dst-select "doc" [a _] (from :X) (limit a))
-    (is (= "SELECT * FROM X LIMIT ?" (:sql (sql* (dst-select 1 2)))))
-    (is (= [1] (:args (sql* (dst-select 1 2)))))
+    (is (= "SELECT * FROM X LIMIT ?" (:sql (as-sql (dst-select 1 2)))))
+    (is (= [1] (:args (as-sql (dst-select 1 2)))))
     (is (= {:doc "doc" :x true} (select-keys (meta #'dst-select) #{:doc :x}))))
 
   (testing
@@ -252,26 +252,26 @@
     (is (= "SELECT * FROM X"
            (:sql
             (binding [azql.dialect/*dialect* ::dialect]
-              (sql* (dst-select))))))
+              (as-sql (dst-select))))))
     (is (= "SELECT * FROM \"X\""
            (:sql
             (binding [azql.dialect/*dialect* default-dialect]
-              (sql* (dst-select)))))))
+              (as-sql (dst-select)))))))
 
   (testing
     "defselect with raw queries"
 
     (defselect dst-select [] "select")
-    (is (= "select" (:sql (sql* (dst-select)))))
-    (is (= [] (:args (sql* (dst-select)))))
+    (is (= "select" (:sql (as-sql (dst-select)))))
+    (is (= [] (:args (as-sql (dst-select)))))
 
     (defselect dst-select [x y] "SELECT * FROM X WHERE :y = y AND x = :x")
-    (is (= "SELECT * FROM X WHERE ? = y AND x = ?" (:sql (sql* (dst-select 1 2)))))
-    (is (= [2 1] (:args (sql* (dst-select 1 2)))))
+    (is (= "SELECT * FROM X WHERE ? = y AND x = ?" (:sql (as-sql (dst-select 1 2)))))
+    (is (= [2 1] (:args (as-sql (dst-select 1 2)))))
 
     (defselect ^:x dst-select "doc" [a b c] ":c:a:b")
-    (is (= "???" (:sql (sql* (dst-select 1 2 3)))))
-    (is (= [3 1 2] (:args (sql* (dst-select 1 2 3)))))
+    (is (= "???" (:sql (as-sql (dst-select 1 2 3)))))
+    (is (= [3 1 2] (:args (as-sql (dst-select 1 2 3)))))
     (is (= {:doc "doc" :x true} (select-keys (meta #'dst-select) #{:doc :x})))))
 
 (def single-table-select? #'azql.core/single-table-select?)
@@ -289,7 +289,7 @@
 
   (testing
     "union"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM (SELECT a FROM T)"
          (union (select [:a] (from "T")))
          "SELECT * FROM (SELECT a FROM T) ORDER BY a"
@@ -307,7 +307,7 @@
 
   (testing
     "intersect"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM (SELECT a FROM T)"
          (intersect (select [:a] (from "T")))
          "(SELECT a FROM A) INTERSECT (SELECT a FROM B)"
@@ -315,7 +315,7 @@
 
   (testing
     "except"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "SELECT * FROM (SELECT a FROM T)"
          (except (select [:a] (from "T")))
          "(SELECT a FROM A) EXCEPT (SELECT a FROM B)"
@@ -324,7 +324,7 @@
 (deftest test-delete
   (testing
     "delete statement"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "DELETE FROM X"
          (delete* :X)
          "DELETE FROM X WHERE (id = ?)"
@@ -333,7 +333,7 @@
 (deftest test-update
   (testing
     "update statement"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "UPDATE X SET a = ? WHERE (id = ?)"
          (-> (update* :X) (setf :a 1) (where {:id 1}))
          "UPDATE X SET a = b, SET b = a WHERE (id = ?)"
@@ -346,7 +346,7 @@
 (deftest test-insert
   (testing
     "insert statement"
-    (are [s z] (= s (:sql (sql* z)))
+    (are [s z] (= s (:sql (as-sql z)))
          "INSERT INTO X (a, b) VALUES (?, ?)"
          (-> (insert* :X) (values {:a 1, :b 2}))
          "INSERT INTO X (a, b) VALUES (?, ?)"
@@ -355,7 +355,7 @@
          (-> (insert* :X) (values {:a 1, :b 2}) (values {:a 3, :b 4}))
          "INSERT INTO X (a, b) VALUES (?, ?)"
          (-> (insert* :X) (values {:a 1, :b 2}) (values {})))
-    (are [s z] (= s (:args (sql* z)))
+    (are [s z] (= s (:args (as-sql z)))
          [[1 3] [2 4]]
          (-> (insert* :X) (values [{:a 1, :b 2}, {:a 3, :b 4}]))
          [[1 3] [2 4]]

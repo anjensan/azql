@@ -151,11 +151,12 @@
   (let [fields (collect-fields records)]
     (->Sql
       (:sql
-        (sql*
+        (as-sql
+         (compose-sql
           (parentheses (comma-list fields))
           VALUES
           (parentheses
-            (comma-list (repeat (count fields) QMARK)))))
+           (comma-list (repeat (count fields) QMARK))))))
       (if (> (count records) 1)
         (map
           (fn [f] (with-meta (map f records) {:batch true}))

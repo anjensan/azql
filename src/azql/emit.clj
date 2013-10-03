@@ -122,17 +122,6 @@
 
 ; rendering
 
-(defn sql*
-  "Converts object to Sql.
-   For internal usage, you should prefer azql.core/sql."
-  ([] NONE)
-  ([v]
-    (if (sql? v)
-      v
-      (as-sql v)))
-  ([v & r]
-    (sql* (compose-sql* v r))))
-
 (defn- special?
   [t]
   (or (identical? t NOSP) (identical? t NONE)))

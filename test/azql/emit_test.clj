@@ -64,7 +64,7 @@
 
   (testing
     "sql generation and formating"
-    (are [sa z] (= (map->Sql sa) (apply sql* z))
+    (are [sa z] (= (map->Sql sa) (as-sql (compose-sql* z)))
          {:sql "\"A\" , \"B\" ?" :args [1]} [:A COMMA :B 1]
          {:sql "SELECT * FROM \"Table\"" :args nil} [(raw "SELECT") :* (raw "FROM") :Table]
          {:sql "A  a B C D" :args nil} [(compose-sql* (raw "A  a") (raw "B") [(raw "C") (raw "D")])]
@@ -78,15 +78,15 @@
          {:sql "A ? B ?" :args [0 [1 2 3]]} ['A 0 'B (batch-arg [1 2 3])])))
 
 (deftest test-helpers
-  (is (= "(? = ?)" (:sql (sql* (parentheses 1 '= 2)))))
-  (is (= "(? = ?)" (:sql (sql* (parentheses* 1 ['=  2])))))
-  (is (= "(? = ?)" (:sql (sql* (parentheses (parentheses 1 '= 2))))))
-  (is (= "((?) = (?))" (:sql (sql* (parentheses (compose-sql (parentheses 1) '= (parentheses 2)))))))
-  (is (= "? + ?" (:sql (sql* (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
-  (is (= "?, ?, ?" (:sql (sql* (comma-list [1 2 3])))))
-  (is (= "(?), ?" (:sql (sql* (comma-list [(parentheses 1) 2])))))
-  (is (= "(\"X\"), (\"Y\")" (:sql (sql* (comma-list [(parentheses :X) (parentheses :Y)])))))
-  (is (= "XX" (:sql (sql* (comma-list [(raw "XX")]))))))
+  (is (= "(? = ?)" (:sql (as-sql (parentheses 1 '= 2)))))
+  (is (= "(? = ?)" (:sql (as-sql (parentheses* 1 ['=  2])))))
+  (is (= "(? = ?)" (:sql (as-sql (parentheses (parentheses 1 '= 2))))))
+  (is (= "((?) = (?))" (:sql (as-sql (parentheses (compose-sql (parentheses 1) '= (parentheses 2)))))))
+  (is (= "? + ?" (:sql (as-sql (remove-parentheses (parentheses (compose-sql 1 '+ 2)))))))
+  (is (= "?, ?, ?" (:sql (as-sql (comma-list [1 2 3])))))
+  (is (= "(?), ?" (:sql (as-sql (comma-list [(parentheses 1) 2])))))
+  (is (= "(\"X\"), (\"Y\")" (:sql (as-sql (comma-list [(parentheses :X) (parentheses :Y)])))))
+  (is (= "XX" (:sql (as-sql (comma-list [(raw "XX")]))))))
 
 (deftest test-surrogate-aliases
   (is (surrogate-alias? (generate-surrogate-alias)))

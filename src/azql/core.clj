@@ -15,7 +15,7 @@
 (defn sql
   "Converts object to Sql."
   [db & args]
-  (with-azql-context db (apply sql* args)))
+  (with-azql-context db (as-sql (compose-sql* args))))
 
 (defrecord Select
   [tables joins fields where
@@ -87,7 +87,7 @@
   (let [sargs (mapv ->SurrogatedArg args)
         sargs-args-map (into {} (map vector sargs args))]
     `(let [sqls# (atom {})
-           original# (fn ~args (sql* (select ~@body)))
+           original# (fn ~args (as-sql (select ~@body)))
            compile# (fn [] (apply original# ~sargs))]
        (defn ~name ~args
          (->LazySelect
@@ -319,7 +319,7 @@
 
 (defn- to-sql-params
   [relation]
-  (let [{s :sql p :args} (sql* relation)]
+  (let [{s :sql p :args} (as-sql relation)]
     (apply vector s p)))
 
 (defmacro with-fetch
@@ -384,7 +384,7 @@
   "Executes update statement."
   ([db query]
      (with-azql-context db
-       (let [{s :sql a :args} (sql* query)]
+       (let [{s :sql a :args} (as-sql query)]
          (first
           (jdbc/db-do-prepared
            *db* false s a))))))
@@ -397,7 +397,7 @@
   "Executes update statement and returns generated keys."
   [db query]
   (with-azql-context db
-    (let [{s :sql a :args} (sql* query)]
+    (let [{s :sql a :args} (as-sql query)]
       (check-argument
         (not-any? #(and (batch-arg? %) (not= (count %) 1)) a)
         "Can't return generated keys for batch query.")
@@ -427,7 +427,7 @@
   "Executes batch statement."
   [db query]
   (with-azql-context db
-    (let [{s :sql a :args} (sql* query)]
+    (let [{s :sql a :args} (as-sql query)]
       (apply jdbc/db-do-prepared *db* false s (prepare-batch-arguments a)))))
 
 (defn values

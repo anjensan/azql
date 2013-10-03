@@ -13,17 +13,17 @@
   (testing
     "rendering of expressions"
     (is (= #azql.emit.Sql["((? > ?) AND (? < ?))" [1 2 3 4]]
-           (sql* (render-expression ['and ['> 1 2] ['< 3 4]]))))
+           (as-sql (render-expression ['and ['> 1 2] ['< 3 4]]))))
     (is (= #azql.emit.Sql["((? + ? + ?) * (? - ? - ?) * (- ?))" [1 2 3 4 5 6 7]]
-           (sql* (render-expression ['* ['+ 1 2 3] ['- 4 5 6] ['- 7]]))))
+           (as-sql (render-expression ['* ['+ 1 2 3] ['- 4 5 6] ['- 7]]))))
     (is (= #azql.emit.Sql["(A = ?)" [1]]
-           (sql* (render-expression ['= :A 1]))))
+           (as-sql (render-expression ['= :A 1]))))
     (is (= #azql.emit.Sql["funn(?, ?)" [1 2]]
-           (sql* (render-expression ['funn 1 2])))))
+           (as-sql (render-expression ['funn 1 2])))))
 
   (testing
     "generic functions and operators"
-    (are [a b] (= (apply ->Sql a) (sql* (render-expression b)))
+    (are [a b] (= (apply ->Sql a) (as-sql (render-expression b)))
          ["f()" nil] '(funfun)
          ["f(?)" [1]] '(funfun 1)
          ["my-fun((? + ?), ?, fun(), fun(?, ?))" [1 2 3 4 5]] '(my-fun (+ 1 2) 3 (fun) (ffun 4 5))
@@ -52,7 +52,7 @@
 (deftest test-null-aware-comparasions
   (testing
     "null-aware comparasions"
-    (are [a b] (= (str \( a \)) (:sql (sql* (render-expression b))))
+    (are [a b] (= (str \( a \)) (:sql (as-sql (render-expression b))))
          "x IS NULL" ['= nil :x]
          "y IS NULL" ['= :y nil]
          "x IS NOT NULL" ['not= nil :x]
@@ -72,14 +72,14 @@
 (deftest test-like-operator
   (testing
     "operator 'like'"
-    (are [a b] (= a (:sql (sql* (render-expression b))))
+    (are [a b] (= a (:sql (as-sql (render-expression b))))
          "(? LIKE ? ESCAPE '$')" ['like? "a" "b"]
          "(x LIKE y ESCAPE '$')" ['like? :x :y]
          "(x LIKE ? ESCAPE '$')" ['starts? :x "abc"]))
   (testing
     "alias 'starts?'"
     (is
-      (= ["x" "abc%"] (:args (sql* (render-expression ['starts? "x" "abc"])))))))
+      (= ["x" "abc%"] (:args (as-sql (render-expression ['starts? "x" "abc"])))))))
 
 (deftest test-dialects-specific-op
   (testing
@@ -90,9 +90,9 @@
     (is (= :myfun-default (render-operator 'myfun)))
     (is (= :myfun-dialect (with-bindings {#'azql.dialect/*dialect* ::custom-dialect}
                             (render-operator 'myfun))))
-    (are [a b] (= a (:sql (sql* (with-bindings
-                                  {#'azql.dialect/*dialect* ::custom-dialect}
-                                  (render-expression b)))))
+    (are [a b] (= a (:sql (as-sql (with-bindings
+                                    {#'azql.dialect/*dialect* ::custom-dialect}
+                                    (render-expression b)))))
          "f1()" ['f1]
          "f2(?)" ['f2 1]
          "Fx3()" ['f3])))
@@ -100,13 +100,13 @@
 (deftest test-case
   (testing
     "operator 'case'"
-    (are [a b] (= a (:sql (sql* (render-expression b))))
+    (are [a b] (= a (:sql (as-sql (render-expression b))))
          "CASE x WHEN a THEN b END" ['case :x :a :b]
          "CASE x WHEN a THEN b ELSE c END" ['case :x :a :b :c]
          "CASE ? WHEN ? THEN ? WHEN ? THEN ? ELSE ? END" ['case nil nil nil nil nil nil]))
   (testing
     "operator 'cond'"
-    (are [a b] (= a (:sql (sql* (render-expression b))))
+    (are [a b] (= a (:sql (as-sql (render-expression b))))
          "CASE WHEN a THEN b END" ['cond :a :b]
          "CASE WHEN x THEN a WHEN b THEN c END" ['cond :x :a :b :c]
          "CASE WHEN x THEN a ELSE b END" ['cond :x :a :b]
