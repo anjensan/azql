@@ -210,22 +210,15 @@ Library supports all CRUD operations.
 Insert new records:
 
 ```clj
-(insert! :table
-  (values [{:field1 1, :field2 "value"}, {:field1 2, :field2 "value"}]))
-```
-
-Columns can be explicitly specified:
-
-```clj
-(insert! :table
-  (fields [:a :b])
-  (values [{:a 1, :b 2}, {:a 3, :b 4}]))
+(insert! db :table
+  (values [{:field1 1, :field2 "value"}
+           {:field1 2, :field2 "value"}]))
 ```
 
 Update:
 
 ```clj
-(update! :table
+(update! db :table
   (setf :cnt (+ :cnt 1))
   (setf :vale "new-value")
   (where (in? :id [1 2 3])))
@@ -234,7 +227,8 @@ Update:
 Delete:
 
 ```clj
-(delete! :table (where (= :id 1)))
+(delete! db :table
+  (where (= :id 1)))
 ```
 
 ### License
