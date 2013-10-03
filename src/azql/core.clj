@@ -13,9 +13,9 @@
         (with-azql-connection ~db)))
 
 (defn sql
-  "Converts object to Sql."
-  [db & args]
-  (with-azql-context db (as-sql (compose-sql* args))))
+  "Convert string to Sql."
+  ([raw-sql] (raw raw-sql))
+  ([raw-sql params] (format-sql raw-sql params)))
 
 (defrecord Select
   [tables joins fields where

@@ -80,10 +80,10 @@ Also you can use map-style conditions.
   (where {:first "Ivan", :last "Ivanov"}))
 ```
 
-Final SQL available using `sql` function:
+Final SQL available using `azql.emit/as-sql` function:
 
 ```clj
-user> (sql db (select (from :Users) (where {:id 123})))
+user> (azql.emit/as-sql (select (from :Users) (where {:id 123})))
 #<"SELECT * FROM \"Users\" WHERE (\"id\" = ?)" 123>
 ```
 

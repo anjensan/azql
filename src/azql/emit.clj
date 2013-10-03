@@ -284,16 +284,14 @@
   "Formats a raw sql qeury (string).
    Replaces all keyword-like placeholders with '?'.
    Args should be a map."
-  ([raw-sql]
-     (format-sql raw-sql {}))
-  ([raw-sql args]
-     (let [al (parse-placeholders raw-sql)
-           pq (replace-placeholders-with-mark raw-sql)
-           akeys (set (keys args))]
-       (when-let [ma (seq (remove akeys al))]
-         (illegal-argument
-          (str "Unknown arguments " (vec ma) " in sql.")))
-       (->Sql pq (map args al)))))
+  [raw-sql args]
+  (let [al (parse-placeholders raw-sql)
+        pq (replace-placeholders-with-mark raw-sql)
+        akeys (set (keys args))]
+    (when-let [ma (seq (remove akeys al))]
+      (illegal-argument
+       (str "Unknown arguments " (vec ma) " in sql.")))
+    (->Sql pq (map args al))))
 
 (def ^:dynamic print-ident-level nil)
 

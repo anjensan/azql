@@ -174,9 +174,9 @@
                     (having (> (count :id) 2)))))))
 
 (deftest test-raw-queries
-  (is (= 3 (count (fetch-all db (sql db 'select '* 'from :users)))))
-  (is (= 3 (fetch-single db
-             (sql db 'select 'count NOSP LEFT_PAREN NOSP '* NOSP RIGHT_PAREN 'from :users)))))
+  (is (= 3 (count (fetch-all db (sql "SELECT * FROM users")))))
+  (is (= 1 (count (fetch-all db (sql "SELECT * FROM users WHERE id = :id" {:id 3}))))))
+
 
 (deftest test-insert
 
