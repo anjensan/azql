@@ -9,7 +9,7 @@
 (defn- do-commands
   [db & commands]
   (doseq [c commands]
-    (execute! db (raw c))))
+    (execute! db (sql c))))
 
 (defn create-database
   [db]

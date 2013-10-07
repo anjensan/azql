@@ -2,10 +2,8 @@
   (:use [azql util connection])
   (:require [clojure.java.jdbc :as jdbc]))
 
-(conj (range 100) 5)
-
 (def ^:const default-dialect ::sql92)
-(def ^:private ^:dynamic *dialect* nil)
+(def ^:dynamic *dialect* nil)
 
 (def dialects-hierarchy (make-hierarchy))
 

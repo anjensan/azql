@@ -11,7 +11,7 @@
 (defn- do-commands
   [db & commands]
   (doseq [c commands]
-    (execute! db (format-sql c))))
+    (execute! db (sql c))))
 
 (defn create-database
   [db]

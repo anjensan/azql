@@ -159,7 +159,7 @@
 (defn join*
   "Adds join section to query."
   [{:keys [tables joins] :as query} type alias table cond]
-  (check-type query [Query] "Firt argument must be a Query")
+  (check-type query [Select] "Firt argument must be a Select")
   (let [t (unwrap-single-table table)
         a (as-alias (or alias t))]
     (check-state (not (contains? tables a)) (str "Relation already has table " a))
