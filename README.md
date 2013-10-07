@@ -4,7 +4,7 @@ AZQL is a SQL like DSL for Clojure.
 
 Main ideas of this project:
 
-- no shema restrictions, orm-mappings etc;
+- no schema restrictions, ORM-mappings etc;
 - DSL should be closer to native SQL as much as possible;
 - no fake optimizations (modern DBs are clever enough);
 - protection from injections, but not from invalid queries;
@@ -15,7 +15,7 @@ Main ideas of this project:
 
 Add the following to your project.clj:
 
-```clj    
+```clj
 [azql "0.2.0"]
 ```
 
@@ -50,9 +50,10 @@ After macroexpansions:
 Function `fetch-all` executes query and converts `resultset-seq` into vector.
 Library provides some alternatives:
 
-- `fetch-one` feches only one record, raises exception if more than one record returned;
-- `fetch-single` fetches only single value (one row and one column);
-- `with-fetch` executes arbitary code with opened `resultset-seq`;
+- `fetch-one` fetches and returns only one record or raises an exception if more 
+  than one record may be returned;
+- `fetch-single` fetches and returns only single value (one row and one column);
+- `with-fetch` executes arbitrary code with opened `resultset-seq`;
 
 Example:
 
@@ -72,7 +73,7 @@ It is possible to compose additional conditions:
 (println (fetch-all db banned-admins))
 ```
 
-Also you can use map-style conditions.
+Also you can use map-style conditions:
 
 ```clj
 (select
@@ -80,7 +81,7 @@ Also you can use map-style conditions.
   (where {:first "Ivan", :last "Ivanov"}))
 ```
 
-Final SQL available using `azql.emit/as-sql` function:
+The resulting SQL string is available through `azql.emit/as-sql` function:
 
 ```clj
 user> (azql.emit/as-sql (select (from :Users) (where {:id 123})))
@@ -89,7 +90,7 @@ user> (azql.emit/as-sql (select (from :Users) (where {:id 123})))
 
 ### Joins
 
-AZQL supports all types of joins:
+AZQL supports all types of JOINs:
 
 ```clj
 (select
@@ -100,8 +101,8 @@ AZQL supports all types of joins:
   (join-full :e :E {:e.x :a.x, :e.y :D.y)))
 ```
 
-The only restriction is that first join must be 'implicit cross join' (function `from`).
-It is possible to use vendor-specific joins:
+The only restriction is that first `join` must be *implicit cross join*
+(function `from`). Vendor-specific JOINs are supported too:
 
 ```clj
 (select
@@ -136,7 +137,7 @@ AZQL supports grouping:
 
 ### Subqueries
 
-Library supports subqueries:
+Subqureies are supported too:
 
 ```clj
 (def all-users (select (from :Users)))
@@ -149,7 +150,7 @@ Library supports subqueries:
 (fetch-all db all-active-users)
 ```
 
-ALL, ANY and SOME are supported also.
+You may also use `ALL`, `ANY` and `SOME` comparison conditions:
 
 ```clj
 (select
@@ -157,7 +158,9 @@ ALL, ANY and SOME are supported also.
   (where {:u.id (any :id (table :ActiveUsers))}))
 ```
 
-Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select' & 'table'.  So, you must use 'select' in you subqueries or pass them as a value. Example:
+Note that AZQL treats all forms in `where` macro as SQL-functions, except of
+`select` and `table`. You must use `select` in your subqueries or pass them
+as value:
 
 ```clj
 (let [sq (fields (table :ActiveUsers) [:id])]
@@ -166,9 +169,9 @@ Note, AZQL treat all forms in 'where' macro as SQL-functions, except 'select' & 
     (where (= :u.id (any sq)))))
 ```
 
-### Limit and offest
+### Limit and offset
 
-Library supports limiting & offset:
+Limiting and offset are well supported:
 
 ```clj
 (select
@@ -195,7 +198,7 @@ Unions:
   (order :name))
 ```
 
-Library provides shortcuts `union`, `intersect` and `except`.
+AZQL provides shortcuts `union`, `intersect` and `except`:
 
 ```clj
 (union
@@ -205,7 +208,8 @@ Library provides shortcuts `union`, `intersect` and `except`.
 
 ### CRUD
 
-Library supports all CRUD operations.
+All CRUD operations are supported. You had already learn about Read, here are 
+the missing bits.
 
 Insert new records:
 
