@@ -11,7 +11,8 @@
   (fn [f]
     (try (f)
       (finally
-        (remove-method myfun ::dialect-a)))))
+        (doseq [d [::dialect-a ::dialect-b]]
+          (remove-method myfun d))))))
 
 (deftest test-parse-jdbc-url
   (is (= :postgresql (parse-jdbc-protocol "jdbc:postgresql://localhost/db")))
@@ -29,7 +30,7 @@
            (current-dialect))))
   (is (= :mydialect
          (with-bindings {#'azql.dialect/*dialect* :mydialect}
-           (jdbc/with-connection database-connection (current-dialect))))))
+           (with-azql-context database-connection (current-dialect))))))
 
 (deftest test-custom-dialect
   (register-dialect ::dialect-a)
