@@ -7,13 +7,13 @@
                  [org.clojure/java.jdbc "0.3.4"]]
   :profiles
   {:h2
-   {:dependencies [[com.h2database/h2 "1.3.174"]]
+   {:dependencies [[com.h2database/h2 "1.4.180"]]
     :test-paths ["test-profile/h2"]},
    :mysql
-   {:dependencies [[mysql/mysql-connector-java "5.1.27"]]
+   {:dependencies [[mysql/mysql-connector-java "5.1.31"]]
     :test-paths ["test-profile/mysql"]},
    :pgsql
-   {:dependencies [[postgresql "9.1-901-1.jdbc4"]]
+   {:dependencies [[org.postgresql/postgresql "9.3-1102-jdbc41"]]
     :test-paths ["test-profile/pgsql"]},
    :dev
    [:h2]}
