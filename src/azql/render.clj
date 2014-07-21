@@ -144,7 +144,7 @@
 
 (defn collect-fields
   [records]
-  (reduce cset/union (map (comp set keys) records)))
+  (sort (reduce cset/union (map (comp set keys) records))))
 
 (defndialect render-values
   [{records :records}]

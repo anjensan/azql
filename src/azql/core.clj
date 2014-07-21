@@ -202,7 +202,7 @@
     (let [aa (if (= 1 (count fs))
                as-alias
                as-alias-safe)]
-      (into {} (map (juxt aa #(prepare-macro-expression % env)) fs)))))
+      (into [] (map (juxt aa #(prepare-macro-expression % env)) fs)))))
 
 (defmacro fields
   "Adds field list to query, support expressions."
