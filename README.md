@@ -137,7 +137,7 @@ AZQL supports grouping:
 
 ### Subqueries
 
-Subqureies are supported too:
+Subqueries are supported too:
 
 ```clj
 (def all-users (select (from :Users)))
@@ -235,8 +235,28 @@ Delete:
   (where (= :id 1)))
 ```
 
+### Transactions
+
+```clj
+;; ensure db connection exists
+(with-connection [c db]
+
+  (transaction c
+    (let [x (fetch-single
+              (select [:cnt]
+              (from :table)
+	      (where {:id 123})))
+          x' (inc x)]
+      (update! c :table
+        (setf! :cnt x'))))
+
+  (transaction :repeatable-read c
+    ;; also supported :read-committed, :read-uncommitted and :serializable
+    ))
+```
+
 ### License
 
-Copyright © 2012 Andrei Zhlobich
+Copyright © 2014 Andrei Zhlobich
 
 Distributed under the Eclipse Public License, the same as Clojure.
