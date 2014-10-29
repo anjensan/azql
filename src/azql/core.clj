@@ -508,22 +508,23 @@
 
 (defn- parse-isolation-level
   [isolation-level]
-  (int
-   (get
-    {:none java.sql.Connection/TRANSACTION_NONE,
-     :read-committed java.sql.Connection/TRANSACTION_READ_COMMITTED,
-     :read-uncommitted java.sql.Connection/TRANSACTION_READ_UNCOMMITTED,
-     :repeatable-read java.sql.Connection/TRANSACTION_REPEATABLE_READ,
-     :serializable java.sql.Connection/TRANSACTION_SERIALIZABLE}
-    isolation-level isolation-level)))
+  (if (integer? isolation-level)
+    isolation-level
+    (let [il ({:read-committed java.sql.Connection/TRANSACTION_READ_COMMITTED
+               :read-uncommitted java.sql.Connection/TRANSACTION_READ_UNCOMMITTED
+               :repeatable-read java.sql.Connection/TRANSACTION_REPEATABLE_READ
+               :serializable java.sql.Connection/TRANSACTION_SERIALIZABLE} isolation-level)]
+      (check-argument (some? il) (str "Unknown isolation level" isolation-level))
+      (int il))))
 
 (defn transaction*
   "Evaluates func in scope of transaction on open database connection."
   ([db-conn isolation-level body-fn]
      (io!
-      (check-state (jdbc/db-find-connection db-conn)
-                   "No open connection found! Use 'with-connection' macro.")
-      (let [^java.sql.Connection c (jdbc/db-connection db-conn)
+      (check-state
+       (jdbc/db-find-connection db-conn)
+       "No open connection found! Use 'with-connection' macro.")
+      (let [c (jdbc/db-connection db-conn)
             old-il (.getTransactionIsolation c)]
         (check-state (.getAutoCommit c) "Connection is not in autocommit mode.")
         (when-not (nil? isolation-level)
@@ -532,7 +533,8 @@
           (.setAutoCommit c false)
           (let [res (body-fn)] (.commit c) res)
           (catch Throwable t
-            (.rollback c))
+            (.rollback c)
+            (throw t))
           (finally
             (when-not (nil? isolation-level)
               (.setTransactionIsolation c old-il))
@@ -541,8 +543,9 @@
      (transaction* db-conn nil body-fn)))
 
 (defmacro transaction
-  "Evaluates body in the context of a transaction
+  ^{:doc "Evaluates body in the context of a transaction
    on the specified database connection."
+    :arglists '([database & body] [isolation-level database & body])}
   [ilevel-or-db & body]
   (let [[il db body]
         (if (or (integer? ilevel-or-db) (keyword? ilevel-or-db))
@@ -551,7 +554,7 @@
   `(transaction* ~db ~il (fn [] ~@body))))
 
 ; query-forms
-(register-subquery-var #'select)        ;
+(register-subquery-var #'select)
 (register-subquery-var #'table)
 (register-subquery-var #'combine)
 (register-subquery-var #'union)

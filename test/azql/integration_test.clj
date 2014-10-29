@@ -211,13 +211,34 @@
     (is (= 3 (count (fetch-all db (select (from :users) (where (= :name "XXX")))))))))
 
 (deftest test-transaction
-  (testing
-      "transaction ok")
-  (testing
-      "nested transactions")
-  (testing
-      "transaction level")
-  (testing
-      "transaction without connection")
-  (testing
-      "transaction rollback"))
+  (with-connection [db2 database-connection]
+
+    (testing "test commit"
+      (delete! db2 :users (where {:name "TT-User"}))
+      (is (nil? (fetch-one db2 (select (from :users) (where {:name "TT-User"})))))
+      (transaction db2 (insert! db2 :users {:id 77 :name "TT-User"}))
+      (is (not (nil? (fetch-one db2 (select (from :users) (where {:name "TT-User"}))))))
+      (delete! db2 :users (where {:name "TT-User"}))
+      (is (nil? (fetch-one db2 (select (from :users) (where {:name "TT-User"}))))))
+
+    (testing "test rollback"
+      (delete! db2 :users (where {:name "TT-User"}))
+      (is (nil? (fetch-one db2 (select (from :users) (where {:name "TT-User"})))))
+      (is (thrown? AssertionError
+        (transaction db2 (insert! db2 :users {:id 77 :name "TT-User"}) (throw (AssertionError.)))))
+      (is (nil? (fetch-one db2 (select (from :users) (where {:name "TT-User"}))))))
+
+    (testing "no nested transactions"
+      (transaction db2
+       (is (thrown-with-msg?
+            IllegalStateException #"not in autocommit mode"
+            (transaction db2 (print "Noo"))))))
+
+    (let [c (jdbc/db-find-connection db2)]
+      (testing "transaction level"
+        (transaction :serializable db2
+         (is (== java.sql.Connection/TRANSACTION_SERIALIZABLE (.getTransactionIsolation c))))
+        (transaction :read-committed db2
+         (is (== java.sql.Connection/TRANSACTION_READ_COMMITTED (.getTransactionIsolation c))))
+        (transaction :read-uncommitted db2
+         (is (== java.sql.Connection/TRANSACTION_READ_UNCOMMITTED (.getTransactionIsolation c))))))))
