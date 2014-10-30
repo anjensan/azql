@@ -95,7 +95,7 @@
   (clojure.lang.MultiFn.
     (str "operator-" (name s))
     current-dialect
-    :default
+    default-dialect
     #'dialects-hierarchy))
 
 (defn register-operator

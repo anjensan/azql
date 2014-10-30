@@ -4,7 +4,8 @@
 (def database-connection
   {:classname "org.h2.Driver"
    :subprotocol "h2"
-   :subname "mem://azql_test"})
+   :subname "mem://azql_test"
+   :dialect ::my-h2})
 
 (defn- do-commands
   [db & commands]
@@ -36,10 +37,9 @@
     )"
    ))
 
-(def database-dialect ::h2)
-(register-dialect ::h2)
-(defmethod guess-dialect :h2 [_] ::h2)
+(def database-dialect ::my-h2)
+;;(register-dialect ::my-h2)
 
-(defmethod quote-name ::h2 [x]
+(defmethod quote-name ::my-h2 [x]
   (str x))
 

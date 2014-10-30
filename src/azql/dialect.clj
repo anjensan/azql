@@ -10,13 +10,15 @@
 (defn parse-jdbc-protocol
   "Parses JDBC connection URL and returns protocol."
   [url]
-  (keyword (get (re-find #"jdbc:([^:]+):.*" url) 1)))
+  (get (re-find #"jdbc:([^:]+):.*" url) 1))
 
 (defmulti guess-dialect
   "Recognizes database dialect by connection URL.
    Method should return keyword."
-  (fn [^java.sql.DatabaseMetaData metadata]
-    (parse-jdbc-protocol (.getURL metadata))))
+  (fn [^java.sql.Connection conn]
+    (let [metadata (.getMetaData conn)
+          jdbc-protocl (parse-jdbc-protocol (.getURL metadata))]
+      jdbc-protocl)))
 
 ;; use ::sql92 for all unknown databases
 (defmethod guess-dialect :default [_] default-dialect)
@@ -25,8 +27,11 @@
   "Guess dialect for current JDBC connection."
   [db]
   (when db
-    (when-let [^java.sql.Connection conn (jdbc/db-connection db)]
-      (guess-dialect (.getMetaData conn)))))
+    (or
+     (when (map? db) (or (:azql/dialect db) (:dialect db)))
+     (when (instance? java.sql.Connection db) (guess-dialect db))
+     (when-let [^java.sql.Connection conn (jdbc/db-connection db)]
+       (guess-dialect conn)))))
 
 (defn current-dialect
   "Returns current SQL dialect.
@@ -54,7 +59,9 @@
           (vary-meta name assoc :doc doc)
           name)]
     `(do
-       (defmulti ~name current-dialect :hierarchy #'dialects-hierarchy)
+       (defmulti ~name current-dialect
+         :default default-dialect
+         :hierarchy #'dialects-hierarchy)
        (defmethod ~name default-dialect ~@body))))
 
 (defmacro with-recognized-dialect

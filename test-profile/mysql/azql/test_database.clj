@@ -6,7 +6,8 @@
    :subprotocol "mysql"
    :user "test"
    :password "test"
-   :subname "//localhost/azql_test"})
+   :subname "//localhost/azql_test"
+   :dialect ::my-mysql})
 
 (defn- do-commands
   [db & commands]
@@ -41,12 +42,10 @@
     )"
    ))
 
-(def database-dialect ::mysql)
-(register-dialect ::mysql)
-
-(defmethod guess-dialect :mysql [_] ::mysql)
-
-(defmethod quote-name ::mysql [x]
-  (str \` x \`))
+(def database-dialect ::my-mysql)
+(register-dialect ::my-mysql)
 
 (def database-quote-symbol \`)
+
+(defmethod quote-name ::my-mysql [x]
+  (str \` x \`))

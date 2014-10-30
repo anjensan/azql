@@ -15,10 +15,10 @@
           (remove-method myfun d))))))
 
 (deftest test-parse-jdbc-url
-  (is (= :postgresql (parse-jdbc-protocol "jdbc:postgresql://localhost/db")))
-  (is (= :oracle (parse-jdbc-protocol "jdbc:oracle:thin:@myhost:1521:orcl")))
-  (is (= :h2 (parse-jdbc-protocol "jdbc:h2:mem://dbname")))
-  (is (= :sqlserver (parse-jdbc-protocol "jdbc:sqlserver://localhost;ttt=1;"))))
+  (is (= "postgresql" (parse-jdbc-protocol "jdbc:postgresql://localhost/db")))
+  (is (= "oracle" (parse-jdbc-protocol "jdbc:oracle:thin:@myhost:1521:orcl")))
+  (is (= "h2" (parse-jdbc-protocol "jdbc:h2:mem://dbname")))
+  (is (= "sqlserver" (parse-jdbc-protocol "jdbc:sqlserver://localhost;ttt=1;"))))
 
 (deftest test-current-dialect
   (is (= :azql.dialect/sql92

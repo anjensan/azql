@@ -6,7 +6,8 @@
    :subprotocol "postgresql"
    :user "test"
    :password "test"
-   :subname "//localhost/azql_test"})
+   :subname "//localhost/azql_test"
+   :dialect ::my-pgsql})
 
 (defn- do-commands
   [db & commands]
@@ -41,9 +42,7 @@
     )"
    ))
 
-(def database-dialect ::pgsql)
-(register-dialect ::pgsql)
-
-(defmethod guess-dialect :postgresql [_] ::pgsql)
+(def database-dialect ::my-pgsql)
+(register-dialect ::my-mysql)
 
 (def database-quote-symbol \")
