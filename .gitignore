@@ -3,7 +3,7 @@
 /classes
 /checkouts
 /bin
-pom.xml
+pom.xml*
 *.jar
 *.class
 .*
