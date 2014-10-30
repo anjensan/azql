@@ -1,4 +1,4 @@
-(defproject azql "0.2.0"
+(defproject azql "0.2.1-SNAPSHOT"
   :description "DSL for SQL generation"
   :url "https://github.com/anjensan/azql"
   :license {:name "Eclipse Public License"
