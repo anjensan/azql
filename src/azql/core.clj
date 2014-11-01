@@ -370,7 +370,7 @@
         :result-set-fn one-result))))
 
 (defn fetch-single
-  "Executes quiery and return single result value. Useful for aggregate functions."
+  "Executes query and return single result value. Useful for aggregate functions."
   ([db relation]
      (with-azql-context db
        (jdbc/query
